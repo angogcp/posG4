@@ -1,0 +1,32 @@
+{
+  "name": "pos-g4",
+  "version": "1.0.0",
+  "description": "Restaurant POS System - Phase 1 MVP",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "cd server && npm run build",
+    "build:web": "cd web && npm run build",
+    "install:all": "npm install && cd server && npm install && cd ../web && npm install",
+    "lint": "npm run lint:server && npm run lint:web",
+    "lint:server": "cd server && npm run lint",
+    "lint:web": "cd web && npm run lint",
+    "type-check": "npm run type-check:server && npm run type-check:web",
+    "type-check:server": "cd server && npm run type-check",
+    "type-check:web": "cd web && npm run type-check"
+  },
+  "keywords": [
+    "pos",
+    "restaurant",
+    "point-of-sale",
+    "mvp"
+  ],
+  "author": "POS Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

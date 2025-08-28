@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Print styles for receipt */
+@media print {
+  /* Hide everything by default */
+  body * { visibility: hidden !important; }
+  /* Show the receipt area */
+  #receipt-print, #receipt-print * { visibility: visible !important; }
+  /* Position the receipt at the top-left for printing */
+  #receipt-print { position: absolute; left: 0; top: 0; display: block !important; }
+
+  /* Page size for 80mm thermal printer */
+  @page { size: 80mm auto; margin: 4mm; }
+
+  /* Avoid page breaks inside items */
+  #receipt-print .no-break { page-break-inside: avoid; }
+}
+
+:root {
+  --radius: 12px;
+  --shadow-color: 210 40% 8%;
+}
+
+@layer base {
+  * {
+    @apply border-neutral-200;
+  }
+  
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-neutral-50 to-neutral-100 text-neutral-900 font-sans;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Modern button styles */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    /* Touch-friendly minimum size */
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-md hover:shadow-lg active:scale-[0.98];
+  }
+  
+  .btn-secondary {
+    @apply bg-neutral-200 text-neutral-900 hover:bg-neutral-300 focus:ring-neutral-400 shadow-sm hover:shadow-md active:scale-[0.98];
+  }
+  
+  .btn-success {
+    @apply bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 shadow-md hover:shadow-lg active:scale-[0.98];
+  }
+  
+  .btn-danger {
+    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 shadow-md hover:shadow-lg active:scale-[0.98];
+  }
+  
+  .btn-ghost {
+    @apply text-neutral-700 hover:bg-neutral-100 focus:ring-neutral-400 active:scale-[0.98];
+  }
+  
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+    min-height: 52px;
+    min-width: 52px;
+  }
+  
+  /* Modern input styles */
+  .input {
+    @apply w-full px-4 py-3 text-sm border border-neutral-300 rounded-xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-neutral-500;
+    /* Touch-friendly minimum height */
+    min-height: 44px;
+  }
+  
+  .input-error {
+    @apply border-danger-300 focus:ring-danger-500;
+  }
+  
+  /* Modern card styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-md border border-neutral-200/50;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  .card-interactive {
+    @apply cursor-pointer transition-all duration-200 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98];
+  }
+  
+  /* Modern badge styles */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full;
+    /* Touch-friendly minimum height */
+    min-height: 24px;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  .badge-success {
+    @apply bg-success-100 text-success-800;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-100 text-warning-800;
+  }
+  
+  .badge-danger {
+    @apply bg-danger-100 text-danger-800;
+  }
+  
+  .badge-neutral {
+    @apply bg-neutral-100 text-neutral-800;
+  }
+  
+  /* Modern modal backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-40;
+  }
+  
+  /* Modern loading spinner */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-neutral-300 border-t-primary-600;
+    /* Touch-friendly minimum size */
+    min-width: 24px;
+    min-height: 24px;
+  }
+  
+  /* Modern toast notifications */
+  .toast {
+    @apply fixed top-4 right-4 z-50 max-w-sm p-4 rounded-xl shadow-xl bg-white border border-neutral-200 animate-slide-down;
+  }
+  
+  .toast-success {
+    @apply border-success-200 bg-success-50;
+  }
+  
+  .toast-error {
+    @apply border-danger-200 bg-danger-50;
+  }
+  
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+  
+  /* Modern navigation styles */
+  .nav-link {
+    @apply relative px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-neutral-100 focus:outline-none focus:bg-neutral-100;
+    /* Touch-friendly minimum size */
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .nav-link-active {
+    @apply bg-primary-100 text-primary-800 hover:bg-primary-200;
+  }
+  
+  .nav-link-active::after {
+    @apply absolute -bottom-1 left-1/2 w-1 h-1 bg-primary-600 rounded-full transform -translate-x-1/2;
+    content: '';
+  }
+}
+
+@layer utilities {
+  /* Custom utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .bg-grid {
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600;
+  }
+  
+  .gradient-success {
+    @apply bg-gradient-to-r from-success-500 to-success-600;
+  }
+  
+  .gradient-accent {
+    @apply bg-gradient-to-r from-accent-500 to-accent-600;
+  }
+  
+  /* Touch-friendly utilities */
+  .touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-friendly-padding {
+    padding: 11px;
+  }
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full hover:bg-neutral-400;
+}
+
+::-webkit-scrollbar-thumb:active {
+  @apply bg-neutral-500;
+}
+
+/* Responsive image optimization */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure form elements are touch-friendly */
+button, input, select, textarea {
+  /* Prevent iOS zoom on focus */
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  button, input, select, textarea {
+    font-size: inherit;
+  }
+}
