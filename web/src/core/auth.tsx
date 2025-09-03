@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
-// Configure axios for development
-if (import.meta.env.DEV) {
-  // In development, Vite proxy will handle /api routes
-  axios.defaults.baseURL = '';
-}
+// Configure axios for development and mobile builds
+const isCapacitor = typeof window !== 'undefined' && /^(capacitor|ionic):\/\//.test(window.location.href);
+const apiBase = (import.meta as any).env?.VITE_API_BASE || (isCapacitor ? 'http://10.0.2.2:4001' : '');
+axios.defaults.baseURL = apiBase;
 axios.defaults.withCredentials = true;
 
 interface User { id: number; username: string; role: string }

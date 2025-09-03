@@ -11,6 +11,8 @@ import CategoriesPage from './pages/CategoriesPage';
 import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
 import ModifiersPage from './pages/ModifiersPage';
+import KitchenPage from './pages/KitchenPage';
+import WaiterPage from './pages/WaiterPage';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -41,6 +43,8 @@ export default function App() {
       >
         <Route index element={<Navigate to="/pos" replace />} />
         <Route path="/pos" element={<PosPage />} />
+        <Route path="/waiter" element={<WaiterPage />} />
+        <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
         <Route path="/products" element={<ProductsPage />} />

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">posg4</string>
+    <string name="title_activity_main">posg4</string>
+    <string name="package_name">com.posg4.app</string>
+    <string name="custom_url_scheme">com.posg4.app</string>
+</resources>

@@ -247,12 +247,15 @@ export async function initDb() {
 
   try {
     const orderItemCols = await database.all("PRAGMA table_info(order_items)");
-    const hasOrderItemOptions = Array.isArray(orderItemCols) && orderItemCols.some((c: any) => c.name === 'options_json');
-    if (!hasOrderItemOptions) {
+    const colNames = Array.isArray(orderItemCols) ? new Set(orderItemCols.map((c: any) => c.name)) : new Set<string>();
+    if (!colNames.has('options_json')) {
       await database.run("ALTER TABLE order_items ADD COLUMN options_json TEXT");
     }
+    if (!colNames.has('status')) {
+      await database.run("ALTER TABLE order_items ADD COLUMN status TEXT DEFAULT 'pending'");
+    }
   } catch (err) {
-    console.warn('Warning: unable to ensure order_items.options_json column', err);
+    console.warn('Warning: unable to ensure order_items columns', err);
   }
 
   // New: category-level options to allow shared modifiers across products in a category

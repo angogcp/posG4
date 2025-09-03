@@ -16,7 +16,9 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  UtensilsCrossed,
+  User
 } from 'lucide-react';
 
 export default function HomeLayout() {
@@ -33,6 +35,8 @@ export default function HomeLayout() {
 
   const navigationItems = [
     { path: '/pos', label: t('nav.pos'), icon: Store, color: 'text-primary-600' },
+    { path: '/waiter', label: 'Waiter', icon: User, color: 'text-success-600' },
+    { path: '/kitchen', label: 'Kitchen', icon: UtensilsCrossed, color: 'text-warning-600' },
     { path: '/orders', label: t('nav.orders'), icon: ShoppingCart, color: 'text-success-600' },
     { path: '/products', label: t('nav.products'), icon: Package, color: 'text-accent-600' },
     { path: '/categories', label: t('nav.categories'), icon: FolderOpen, color: 'text-warning-600' },

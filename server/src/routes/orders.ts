@@ -14,6 +14,7 @@ router.get('/', requireAuth, async (req, res) => {
   const qRaw = (req.query.q ?? '').toString().trim();
   const startDate = (req.query.start_date ?? '').toString().trim(); // format: YYYY-MM-DD
   const endDate = (req.query.end_date ?? '').toString().trim();     // format: YYYY-MM-DD
+  const statusParam = (req.query.status ?? '').toString().trim();   // e.g. "open,preparing"
 
   let page = parseInt((req.query.page ?? '1').toString(), 10);
   let pageSize = parseInt((req.query.pageSize ?? '20').toString(), 10);
@@ -43,6 +44,14 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(endDate);
   }
 
+  if (statusParam) {
+    const statuses = statusParam.split(',').map(s => s.trim()).filter(Boolean);
+    if (statuses.length) {
+      where.push(`status IN (${statuses.map(() => '?').join(',')})`);
+      params.push(...statuses);
+    }
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   // Total count
@@ -67,7 +76,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, async (req, res) => {
-  const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount } = req.body as any;
+  const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount, status: order_status } = req.body as any;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'No items provided' });
@@ -79,13 +88,14 @@ router.post('/', requireAuth, async (req, res) => {
   const subtotal = items.reduce((sum: number, it: any) => sum + it.quantity * it.unit_price, 0);
   const total = Math.max(0, subtotal - discount_amount + tax_amount);
   const orderNo = `POS-${nanoid()}`;
+  const statusToUse = (order_status && typeof order_status === 'string') ? order_status : 'completed';
 
   try {
     const insertOrderSql = `
       INSERT INTO orders (order_number, user_id, subtotal, discount_amount, tax_amount, total_amount, paid_amount, payment_method, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    const orderResult = await db.run(insertOrderSql, [orderNo, userId, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method]);
+    const orderResult = await db.run(insertOrderSql, [orderNo, userId, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, statusToUse]);
     const orderId = orderResult.lastID;
 
     for (const it of items) {
@@ -102,17 +112,48 @@ router.post('/', requireAuth, async (req, res) => {
         }
       }
 
+      const itemStatus = typeof it.status === 'string' ? it.status : (statusToUse === 'completed' ? 'done' : 'pending');
+
       await db.run(
-        `INSERT INTO order_items (order_id, product_id, product_code, product_name, quantity, unit_price, total_price, options_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [orderId, it.product_id, it.product_code, it.product_name, it.quantity, it.unit_price, it.quantity * it.unit_price, optionsStr]
+        `INSERT INTO order_items (order_id, product_id, product_code, product_name, quantity, unit_price, total_price, options_json, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [orderId, it.product_id, it.product_code, it.product_name, it.quantity, it.unit_price, it.quantity * it.unit_price, optionsStr, itemStatus]
       );
     }
-    await db.run(`INSERT INTO payments (order_id, amount, method) VALUES (?, ?, ?)`, [orderId, paid_amount, payment_method]);
 
-    res.json({ ok: true, data: { order_id: orderId, order_number: orderNo, total_amount: total } });
+    // Create payment record only if paid_amount is provided and method specified
+    if (paid_amount != null && payment_method) {
+      await db.run(`INSERT INTO payments (order_id, amount, method) VALUES (?, ?, ?)`, [orderId, paid_amount, payment_method]);
+    }
+
+    res.json({ ok: true, data: { order_id: orderId, order_number: orderNo, total_amount: total, status: statusToUse } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create order' });
   }
+});
+
+// Update order status
+router.put('/:id/status', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const { status } = req.body as any;
+  if (!status || typeof status !== 'string') return res.status(400).json({ error: 'status is required' });
+  const db = getDb();
+  const result = await db.run('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+  if (result.changes === 0) return res.status(404).json({ error: 'Order not found' });
+  res.json({ ok: true });
+});
+
+// Update order item status
+router.put('/:orderId/items/:itemId/status', requireAuth, async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const itemId = Number(req.params.itemId);
+  const { status } = req.body as any;
+  if (!status || typeof status !== 'string') return res.status(400).json({ error: 'status is required' });
+  const db = getDb();
+  // Ensure item belongs to order
+  const item = await db.get('SELECT * FROM order_items WHERE id = ? AND order_id = ?', [itemId, orderId]);
+  if (!item) return res.status(404).json({ error: 'Order item not found' });
+  await db.run('UPDATE order_items SET status = ? WHERE id = ?', [status, itemId]);
+  res.json({ ok: true });
 });

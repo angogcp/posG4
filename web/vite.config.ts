@@ -5,7 +5,7 @@ export default defineConfig({
   appType: 'spa',
   plugins: [react()],
   server: {
-    host: '127.0.0.1',
+    host: true,
     port: 5791,
     strictPort: true,
     proxy: {

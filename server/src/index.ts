@@ -37,14 +37,18 @@ const allowedOrigins = [
   'http://localhost:5190',
   'http://127.0.0.1:5176',
   'http://127.0.0.1:5186',
-  'http://127.0.0.1:5190'
+  'http://127.0.0.1:5190',
+  // Allow Capacitor/Ionic default scheme and host during mobile runtime
+  'capacitor://localhost',
+  'ionic://localhost'
 ];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const allowed =
       allowedOrigins.includes(origin) ||
-      /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):\d+$/.test(origin);
+      // Allow typical LAN hosts and emulator loopback
+      /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|10\.0\.3\.2|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):\d+$/.test(origin);
     callback(null, allowed);
   },
   credentials: true
@@ -113,6 +117,20 @@ app.use('/api/coupons', couponsRouter);
 app.use('/api/modifiers', modifiersRouter);
 app.use('/api/print', printRouter);
 app.use('/api/printers', printRouter);
+
+// Serve built frontend if available (for same-origin mobile/web usage)
+try {
+  const webDist = path.resolve(process.cwd(), '..', 'web', 'dist');
+  if (fs.existsSync(webDist)) {
+    app.use(express.static(webDist));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      return res.sendFile(path.join(webDist, 'index.html'));
+    });
+  }
+} catch (e) {
+  // ignore static serve errors in dev
+}
 
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
