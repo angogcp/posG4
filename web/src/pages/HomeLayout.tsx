@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../core/auth';
 import LanguageSwitch from '../components/LanguageSwitch';
+import ThemeSwitch from '../components/ThemeSwitch';
 import { 
   Store, 
   ShoppingCart, 
@@ -105,7 +106,8 @@ export default function HomeLayout() {
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-danger-500 rounded-full border-2 border-white"></span>
               </button>
               
-              {/* Language Switch */}
+              {/* Theme & Language */}
+              <ThemeSwitch />
               <LanguageSwitch />
               
               {/* Mobile menu button */}
