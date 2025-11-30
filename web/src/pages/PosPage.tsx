@@ -59,6 +59,43 @@ export default function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkingOut, setCheckingOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  const getPlaceholderColor = (str: string) => {
+    const colors = [
+      'bg-red-100 text-red-600',
+      'bg-orange-100 text-orange-600',
+      'bg-amber-100 text-amber-600',
+      'bg-yellow-100 text-yellow-600',
+      'bg-lime-100 text-lime-600',
+      'bg-green-100 text-green-600',
+      'bg-emerald-100 text-emerald-600',
+      'bg-teal-100 text-teal-600',
+      'bg-cyan-100 text-cyan-600',
+      'bg-sky-100 text-sky-600',
+      'bg-blue-100 text-blue-600',
+      'bg-indigo-100 text-indigo-600',
+      'bg-violet-100 text-violet-600',
+      'bg-purple-100 text-purple-600',
+      'bg-fuchsia-100 text-fuchsia-600',
+      'bg-pink-100 text-pink-600',
+      'bg-rose-100 text-rose-600',
+    ];
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+
+
   
   // Scan/Code input
   const [scanCode, setScanCode] = useState('');
@@ -375,6 +412,10 @@ export default function PosPage() {
   }
 
   const subtotal = useMemo(() => cart.reduce((sum, it) => sum + (it.unitPrice * it.qty), 0), [cart]);
+
+  const getQtyInCart = (productId: number) => {
+    return cart.reduce((acc, item) => item.product.id === productId ? acc + item.qty : acc, 0);
+  };
 
   // Coupon logic
   async function applyCoupon() {
@@ -725,89 +766,153 @@ export default function PosPage() {
         </div>
 
         {/* Product Grid/List */}
-        <div className="flex-1 overflow-y-auto min-h-0 pr-2">
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-              {filtered.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="group relative flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden text-left h-full"
-                >
-                  <div className="aspect-[4/3] bg-neutral-100 relative overflow-hidden">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-300 group-hover:text-primary-200 transition-colors">
-                        <Utensils className="w-12 h-12" />
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                      <div className="bg-white/90 p-1.5 rounded-full shadow-sm text-primary-600">
-                        <Plus className="w-4 h-4" />
-                      </div>
+        <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar">
+          {viewMode === 'grid' && activeCat === 'all' && !query.trim() ? (
+            <div className="space-y-8 pb-12">
+              {categories.map(cat => {
+                const catProducts = products.filter(p => p.category_id === cat.id);
+                if (catProducts.length === 0) return null;
+                return (
+                  <div key={cat.id}>
+                    <h3 className="font-bold text-lg text-neutral-700 mb-3 sticky top-0 bg-neutral-50/95 backdrop-blur py-2 z-10 px-1 border-b border-neutral-200/50">
+                      {cat.name}
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {catProducts.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => addToCart(p)}
+                          className="group relative flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden text-left h-full"
+                        >
+                          <div className={`aspect-[4/3] relative overflow-hidden ${p.image_url ? 'bg-neutral-100' : getPlaceholderColor(p.name)}`}>
+                            {p.image_url ? (
+                              <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center opacity-80 group-hover:scale-110 transition-transform duration-500">
+                                <Utensils className="w-12 h-12 opacity-50" />
+                              </div>
+                            )}
+                            {getQtyInCart(p.id) > 0 && (
+                              <div className="absolute top-2 left-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10 border border-white">
+                                {getQtyInCart(p.id)}
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                              <div className="bg-white/90 p-1.5 rounded-full shadow-sm text-primary-600">
+                                <Plus className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-3 flex flex-col flex-1">
+                            <h3 className="font-medium text-neutral-900 line-clamp-2 mb-1 flex-1 text-sm">{p.name}</h3>
+                            <div className="flex items-baseline justify-between mt-auto">
+                              <span className="text-sm font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
+                                {formatCurrency(p.price)}
+                              </span>
+                              {p.code && <span className="text-[10px] text-neutral-400 font-mono">{p.code}</span>}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <div className="p-3 flex flex-col flex-1">
-                    <h3 className="font-medium text-neutral-900 line-clamp-2 mb-1 flex-1">{p.name}</h3>
-                    <div className="flex items-baseline justify-between mt-auto">
-                      <span className="text-sm font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
-                        {formatCurrency(p.price)}
-                      </span>
-                      {p.code && <span className="text-[10px] text-neutral-400 font-mono">{p.code}</span>}
-                    </div>
-                  </div>
-                </button>
-              ))}
-              {filtered.length === 0 && (
-                <div className="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400">
-                  <Package className="w-12 h-12 mb-2 opacity-50" />
-                  <p>{t('pos.noItems') || 'No products found'}</p>
-                </div>
-              )}
+                );
+              })}
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              {filtered.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="group flex items-center bg-white rounded-xl border border-neutral-200 p-2 hover:shadow-md hover:border-primary-300 transition-all duration-200 text-left"
-                >
-                  <div className="w-16 h-16 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0 mr-4">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-300 group-hover:text-primary-200 transition-colors">
-                        <Utensils className="w-6 h-6" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-neutral-900 truncate text-lg">{p.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                       {p.code && <span className="text-xs text-neutral-400 font-mono bg-neutral-100 px-1.5 py-0.5 rounded">{p.code}</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 pl-4">
-                    <span className="text-lg font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg">
-                      {formatCurrency(p.price)}
-                    </span>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-primary-100 text-primary-600 p-1.5 rounded-full">
-                        <Plus className="w-4 h-4" />
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 pb-12">
+                {filtered.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    className="group relative flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden text-left h-full"
+                  >
+                    <div className={`aspect-[4/3] relative overflow-hidden ${p.image_url ? 'bg-neutral-100' : getPlaceholderColor(p.name)}`}>
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center opacity-80 group-hover:scale-110 transition-transform duration-500">
+                          <Utensils className="w-12 h-12 opacity-50" />
+                        </div>
+                      )}
+                      {getQtyInCart(p.id) > 0 && (
+                        <div className="absolute top-2 left-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10 border border-white">
+                          {getQtyInCart(p.id)}
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                        <div className="bg-white/90 p-1.5 rounded-full shadow-sm text-primary-600">
+                          <Plus className="w-4 h-4" />
+                        </div>
                       </div>
                     </div>
+                    <div className="p-3 flex flex-col flex-1">
+                      <h3 className="font-medium text-neutral-900 line-clamp-2 mb-1 flex-1 text-sm">{p.name}</h3>
+                      <div className="flex items-baseline justify-between mt-auto">
+                        <span className="text-sm font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
+                          {formatCurrency(p.price)}
+                        </span>
+                        {p.code && <span className="text-[10px] text-neutral-400 font-mono">{p.code}</span>}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {filtered.length === 0 && (
+                  <div className="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400">
+                    <Package className="w-12 h-12 mb-2 opacity-50" />
+                    <p>{t('pos.noItems') || 'No products found'}</p>
                   </div>
-                </button>
-              ))}
-              {filtered.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-                  <Package className="w-12 h-12 mb-2 opacity-50" />
-                  <p>{t('pos.noItems') || 'No products found'}</p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 pb-12">
+                {filtered.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    className="group flex items-center bg-white rounded-xl border border-neutral-200 p-2 hover:shadow-md hover:border-primary-300 transition-all duration-200 text-left"
+                  >
+                    <div className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 mr-4 ${p.image_url ? 'bg-neutral-100' : getPlaceholderColor(p.name)}`}>
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center opacity-80 group-hover:scale-110 transition-transform duration-500">
+                          <Utensils className="w-6 h-6 opacity-50" />
+                        </div>
+                      )}
+                      {getQtyInCart(p.id) > 0 && (
+                        <div className="absolute top-1 left-1 bg-primary-600 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-sm border border-white">
+                          {getQtyInCart(p.id)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-neutral-900 truncate text-lg">{p.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                         {p.code && <span className="text-xs text-neutral-400 font-mono bg-neutral-100 px-1.5 py-0.5 rounded">{p.code}</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 pl-4">
+                      <span className="text-lg font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg">
+                        {formatCurrency(p.price)}
+                      </span>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-primary-100 text-primary-600 p-1.5 rounded-full">
+                          <Plus className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {filtered.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+                    <Package className="w-12 h-12 mb-2 opacity-50" />
+                    <p>{t('pos.noItems') || 'No products found'}</p>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
         
@@ -1225,7 +1330,7 @@ export default function PosPage() {
 
       {/* Messages/Toasts */}
       {message && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-neutral-900/90 text-white px-6 py-3 rounded-full shadow-2xl backdrop-blur-md z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 flex items-center gap-3">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-neutral-900/90 text-white px-6 py-3 rounded-full shadow-2xl backdrop-blur-md z-50 animate-in slide-in-from-top-4 fade-in duration-300 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-success-400" />
           <span className="font-medium">{message}</span>
           <button onClick={() => setMessage(null)} className="ml-2 hover:bg-white/20 rounded-full p-1">
