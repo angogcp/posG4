@@ -1,8 +1,0 @@
-{
-  "order_id": 123,
-  "items": [
-    { "name": "Nasi Lemak", "quantity": 2, "price": 12.50, "product_id": 1 }
-  ],
-  "total": 25.00,
-  "use_smart_routing": true
-}
