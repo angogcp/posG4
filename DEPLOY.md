@@ -1,18 +1,20 @@
 # Deployment Guide
 
-## Vercel Deployment
+## Vercel Deployment (Frontend)
 
 This project consists of a **Web Frontend** (React/Vite) and a **Node.js Backend** (Express).
 
 ### ⚠️ Important Limitation: SQLite Database
 The backend currently uses **SQLite**, which stores data in a local file (`server/data/pos.sqlite3`).
 **Vercel Serverless Functions do not support persistent local file storage.**
-If you deploy the backend to Vercel, the database will reset every time the server restarts (which happens frequently in serverless environments).
+If you deploy the backend to Vercel, the database will reset every time the server restarts.
 
-### Recommended Deployment Strategy
+### Recommended Backend Solutions
 
-1.  **Frontend (Web)**: Deploy to **Vercel**.
-2.  **Backend (Server)**: Deploy to a VPS or a platform that supports persistent storage (e.g., Render, Railway, DigitalOcean, or a standard VM) OR migrate the database to a cloud provider (like Supabase, PlanetScale, or Vercel Postgres).
+See **[BACKEND_ALTERNATIVES.md](./BACKEND_ALTERNATIVES.md)** for detailed free options including:
+1.  **Turso** (Cloud SQLite) - *Best for Vercel*
+2.  **Fly.io** (Docker + Persistent Volume)
+3.  **Oracle Cloud** (Free VPS)
 
 ### How to Deploy Frontend to Vercel
 

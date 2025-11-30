@@ -58,9 +58,13 @@ app.use(cors({
 }));
 
 // Ensure sessions data directory exists
-const dataDir = path.join(process.cwd(), 'data');
+const isVercel = process.env.VERCEL === '1';
+const dataDir = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
+
 try {
-  fs.mkdirSync(dataDir, { recursive: true });
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
 } catch (e) {
   // ignore if exists or cannot create; connect-sqlite3 may still handle
 }
@@ -146,6 +150,10 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

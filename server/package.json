@@ -11,10 +11,12 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
     "connect-sqlite3": "^0.9.16",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.19.2",
     "express-session": "^1.17.3",
     "express-validator": "^7.2.1",

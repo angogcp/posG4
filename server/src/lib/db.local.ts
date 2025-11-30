@@ -1,9 +1,6 @@
-import { createClient } from '@libsql/client';
-import dotenv from 'dotenv';
+import sqlite3 from 'sqlite3';
 import fs from 'fs';
 import path from 'path';
-
-dotenv.config();
 
 export interface RunResult { lastID: number; changes: number }
 
@@ -24,44 +21,41 @@ export function ensureDataDir() {
 
 export function getDb(): Database {
   if (!db) {
-    const url = process.env.TURSO_DATABASE_URL;
-    const authToken = process.env.TURSO_AUTH_TOKEN;
+    ensureDataDir();
+    const dbPath = path.join(process.cwd(), 'data', 'pos.sqlite3');
+    const rawDb = new sqlite3.Database(dbPath);
 
-    if (!url) {
-      console.warn('TURSO_DATABASE_URL is not defined. Falling back to in-memory database or failing.');
-      throw new Error('TURSO_DATABASE_URL is not defined in environment variables.');
-    }
-
-    const client = createClient({
-      url,
-      authToken,
+    // Custom wrappers to retain lastID/changes for run
+    const run = (sql: string, params: any[] = []) => new Promise<RunResult>((resolve, reject) => {
+      rawDb.run(sql, params, function (err) {
+        if (err) return reject(err);
+        resolve({ lastID: (this as any).lastID, changes: (this as any).changes });
+      });
     });
-
-    const run = async (sql: string, params: any[] = []): Promise<RunResult> => {
-      const rs = await client.execute({ sql, args: params });
-      return { 
-        lastID: Number(rs.lastInsertRowid ?? 0), 
-        changes: rs.rowsAffected 
-      };
-    };
-
-    const get = async (sql: string, params: any[] = []) => {
-      const rs = await client.execute({ sql, args: params });
-      return rs.rows[0] || undefined;
-    };
-
-    const all = async (sql: string, params: any[] = []) => {
-      const rs = await client.execute({ sql, args: params });
-      return rs.rows;
-    };
-
-    const exec = async (sql: string) => {
-      await client.executeMultiple(sql);
-    };
-
-    const close = async () => {
-      client.close();
-    };
+    const get = (sql: string, params: any[] = []) => new Promise<any>((resolve, reject) => {
+      rawDb.get(sql, params, (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+    const all = (sql: string, params: any[] = []) => new Promise<any[]>((resolve, reject) => {
+      rawDb.all(sql, params, (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+    const exec = (sql: string) => new Promise<void>((resolve, reject) => {
+      rawDb.exec(sql, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+    const close = () => new Promise<void>((resolve, reject) => {
+      rawDb.close((err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
 
     db = { run, get, all, exec, close };
   }
