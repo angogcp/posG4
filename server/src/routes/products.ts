@@ -202,7 +202,7 @@ router.get('/:id/modifiers', requireAuth, async (req, res) => {
   let modsFromCategory: any[] = [];
   if (categoryId) {
     modsFromCategory = await db.all(
-      `SELECT m.* FROM modifier_assignments ma
+      `SELECT m.*, 'category' as source FROM modifier_assignments ma
        JOIN modifiers m ON m.id = ma.modifier_id
        WHERE ma.entity_type = 'category' AND ma.entity_id = ? AND m.is_active = 1
        ORDER BY m.sort_order, m.id`,
@@ -211,7 +211,7 @@ router.get('/:id/modifiers', requireAuth, async (req, res) => {
   }
 
   const modsFromProduct = await db.all(
-    `SELECT m.* FROM modifier_assignments ma
+    `SELECT m.*, 'product' as source FROM modifier_assignments ma
      JOIN modifiers m ON m.id = ma.modifier_id
      WHERE ma.entity_type = 'product' AND ma.entity_id = ? AND m.is_active = 1
      ORDER BY m.sort_order, m.id`,

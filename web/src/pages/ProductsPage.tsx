@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../contexts/SettingsContext';
 import {
   Package,
   Plus,
@@ -22,8 +23,10 @@ import {
   Printer,
   Code,
   MoreHorizontal,
-  RotateCcw
+  RotateCcw,
+  List
 } from 'lucide-react';
+import ModifierAssignment from '../components/ModifierAssignment';
 
 interface Category { id: number; name: string }
 interface Product {
@@ -52,6 +55,7 @@ interface PageMeta { total: number; page: number; pageSize: number; pages: numbe
 
 export default function ProductsPage() {
   const { t } = useTranslation();
+  const { formatCurrency } = useSettings();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
@@ -67,27 +71,12 @@ export default function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState({ code: '', name: '', category_id: '', price: '', image_url: '', is_active: true });
-  const [optionsText, setOptionsText] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
-  // Printer settings state
-  const [printerSettings, setPrinterSettings] = useState<{
-    enabled: boolean;
-    printer_ids: number[];
-  }>({ enabled: false, printer_ids: [] });
-  // Modifiers builder state: GUI vs Advanced JSON
-  const [advancedJson, setAdvancedJson] = useState(false);
-  type OptItem = { name: string; price_delta?: number };
-  type OptGroup = { name: string; required?: boolean; max_select?: number; options: OptItem[] };
-  const [optGroups, setOptGroups] = useState<OptGroup[]>([]);
+  const [activeTab, setActiveTab] = useState<'basic' | 'modifiers'>('basic');
 
   useEffect(() => {
     axios.get('/api/categories').then(r => setCategories(r.data.data || r.data));
-    // Load active printers
-    axios.get('/api/printers').then(r => {
-      const allPrinters = r.data.data || r.data || [];
-      setPrinters(Array.isArray(allPrinters) ? allPrinters.filter((p: Printer) => p.is_active) : []);
-    }).catch(console.error);
   }, []);
 
   // Debounce search input
@@ -131,51 +120,22 @@ export default function ProductsPage() {
   function openCreate() {
     setEditing(null);
     setForm({ code: '', name: '', category_id: '', price: '', image_url: '', is_active: true });
-    setOptionsText('');
-    setOptGroups([]);
-    setPrinterSettings({ enabled: false, printer_ids: [] });
-    setAdvancedJson(false);
+    setActiveTab('basic');
     setModalOpen(true);
   }
   function openEdit(p: Product) {
-    console.log('openEdit called with product:', p);
     setEditing(p);
-    const formData = { code: p.code, name: p.name, category_id: p.category_id ? String(p.category_id) : '', price: String(p.price), image_url: p.image_url || '', is_active: !!p.is_active };
-    console.log('Setting form data:', formData);
+    const formData = { 
+      code: p.code, 
+      name: p.name, 
+      category_id: p.category_id ? String(p.category_id) : '', 
+      price: String(p.price), 
+      image_url: p.image_url || '', 
+      is_active: !!p.is_active 
+    };
     setForm(formData);
-    try {
-      const optionsText = p.options_json ? JSON.stringify(p.options_json, null, 2) : '';
-      console.log('Setting options text:', optionsText);
-      setOptionsText(optionsText);
-    } catch { setOptionsText(''); }
-    try {
-      const arr = Array.isArray((p as any).options_json) ? (p as any).options_json : [];
-      const normalized: OptGroup[] = (arr || []).map((g: any) => ({
-        name: String(g?.name || ''),
-        required: !!g?.required,
-        max_select: Number.isFinite(Number(g?.max_select)) ? Number(g.max_select) : 1,
-        options: Array.isArray(g?.options) ? g.options.map((o: any) => ({ name: String(o?.name || ''), price_delta: Number(o?.price_delta || 0) })) : [],
-      }));
-      console.log('Setting opt groups:', normalized);
-      setOptGroups(normalized);
-    } catch { setOptGroups([]); }
-    // Load printer settings from options_json
-    try {
-      const printerConfig = p.options_json?.printer_settings;
-      if (printerConfig) {
-        setPrinterSettings({
-          enabled: !!printerConfig.enabled,
-          printer_ids: Array.isArray(printerConfig.printer_ids) ? printerConfig.printer_ids : []
-        });
-      } else {
-        setPrinterSettings({ enabled: false, printer_ids: [] });
-      }
-    } catch {
-      setPrinterSettings({ enabled: false, printer_ids: [] });
-    }
-    setAdvancedJson(false);
+    setActiveTab('basic');
     setModalOpen(true);
-    console.log('Modal should now be open');
   }
   function closeModal() {
     setModalOpen(false);
@@ -195,59 +155,7 @@ export default function ProductsPage() {
         image_url: form.image_url.trim() || null,
         is_active: form.is_active ? 1 : 0,
       };
-      // Build options_json with modifiers and printer settings
-      let optionsJson: any = {};
       
-      if (advancedJson) {
-        const text = optionsText.trim();
-        if (text) {
-          try { 
-            optionsJson = JSON.parse(text);
-          } catch { 
-            alert('Options JSON 无效，请检查格式'); 
-            return; 
-          }
-        }
-      } else {
-        // Build modifiers from GUI builder
-        const normalized: OptGroup[] = optGroups
-          .map(g => ({
-            name: String(g.name || '').trim(),
-            required: !!g.required,
-            max_select: Number.isFinite(Number(g.max_select)) && Number(g.max_select) > 0 ? Number(g.max_select) : 1,
-            options: Array.isArray(g.options) ? g.options.map(o => ({ name: String(o.name || '').trim(), price_delta: Number(o.price_delta || 0) })) : [],
-          }))
-          .filter(g => g.name && g.options && g.options.filter(o => o.name).length > 0)
-          .map(g => ({ ...g, options: g.options.filter(o => o.name) }));
-        if (normalized.length > 0) {
-          optionsJson = normalized;
-        }
-      }
-      
-      // Add printer settings to options_json
-      if (printerSettings.enabled && printerSettings.printer_ids.length > 0) {
-        if (Array.isArray(optionsJson)) {
-          // If optionsJson is an array (modifiers), convert to object
-          optionsJson = {
-            modifiers: optionsJson,
-            printer_settings: {
-              enabled: printerSettings.enabled,
-              printer_ids: printerSettings.printer_ids
-            }
-          };
-        } else {
-          // If optionsJson is an object, add printer_settings
-          optionsJson.printer_settings = {
-            enabled: printerSettings.enabled,
-            printer_ids: printerSettings.printer_ids
-          };
-        }
-      }
-      
-      // Only set options_json if there's actual content
-      if (Object.keys(optionsJson).length > 0 || Array.isArray(optionsJson) && optionsJson.length > 0) {
-        payload.options_json = optionsJson;
-      }
       if (!editing) {
         await axios.post('/api/products', payload);
       } else {
@@ -278,13 +186,8 @@ export default function ProductsPage() {
     const nameOk = form.name.trim().length > 0;
     const priceNum = Number(form.price);
     const priceOk = !Number.isNaN(priceNum) && priceNum >= 0;
-    if (advancedJson) {
-      if (optionsText.trim()) {
-        try { JSON.parse(optionsText); } catch { return false; }
-      }
-    }
     return codeOk && nameOk && priceOk;
-  }, [form.code, form.name, form.price, optionsText, advancedJson]);
+  }, [form.code, form.name, form.price]);
 
   // Pagination helpers
   const canPrev = page > 1;
@@ -484,7 +387,7 @@ export default function ProductsPage() {
                       )}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-right">
-                      <span className="text-base sm:text-lg font-bold text-neutral-900">${p.price.toFixed(2)}</span>
+                      <span className="text-base sm:text-lg font-bold text-neutral-900">{formatCurrency(p.price)}</span>
                     </td>
                     <td className="px-4 sm:px-6 py-4">
                       {p.is_active ? (
@@ -618,370 +521,162 @@ export default function ProductsPage() {
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 space-y-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-neutral-900 flex items-center">
-                    <Package className="w-5 h-5 mr-2 text-primary-600" />
-                    Basic Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                        <Code className="w-4 h-4 inline mr-2" />
-                        {t('products.code')}
-                      </label>
-                      <input 
-                        value={form.code} 
-                        onChange={e => onChange('code', e.target.value)} 
-                        className="input" 
-                        placeholder="Enter product code"
-                      />
+              <div className="flex flex-col h-[calc(90vh-140px)]">
+                {/* Tabs */}
+                <div className="flex items-center px-6 border-b border-neutral-200 bg-neutral-50/50">
+                  <button
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'basic'
+                        ? 'border-primary-600 text-primary-700'
+                        : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                    }`}
+                    onClick={() => setActiveTab('basic')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Package className="w-4 h-4" />
+                      <span>Basic Information</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                        <Package className="w-4 h-4 inline mr-2" />
-                        {t('products.name')}
-                      </label>
-                      <input 
-                        value={form.name} 
-                        onChange={e => onChange('name', e.target.value)} 
-                        className="input" 
-                        placeholder="Enter product name"
-                      />
+                  </button>
+                  <button
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'modifiers'
+                        ? 'border-primary-600 text-primary-700'
+                        : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                    }`}
+                    onClick={() => setActiveTab('modifiers')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <List className="w-4 h-4" />
+                      <span>{t('products.modifiers')}</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                        <Tag className="w-4 h-4 inline mr-2" />
-                        {t('products.category')}
-                      </label>
-                      <select 
-                        value={form.category_id} 
-                        onChange={e => onChange('category_id', e.target.value)} 
-                        className="input"
-                      >
-                        <option value="">Select category</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                        <DollarSign className="w-4 h-4 inline mr-2" />
-                        {t('products.price')}
-                      </label>
-                      <input 
-                        value={form.price} 
-                        onChange={e => onChange('price', e.target.value)} 
-                        className="input" 
-                        type="number" 
-                        step="0.01" 
-                        min="0"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                        <Image className="w-4 h-4 inline mr-2" />
-                        Image URL (optional)
-                      </label>
-                      <input 
-                        value={form.image_url} 
-                        onChange={e => onChange('image_url', e.target.value)} 
-                        className="input" 
-                        placeholder="https://example.com/image.jpg"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Active Status */}
-                  <div className="flex items-center space-x-3 p-4 bg-neutral-50 rounded-2xl">
-                    <label className="inline-flex items-center space-x-3 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.is_active} 
-                        onChange={e => onChange('is_active', e.target.checked)}
-                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                      />
-                      <div className="flex items-center space-x-2">
-                        {form.is_active ? (
-                          <Eye className="w-4 h-4 text-success-600" />
-                        ) : (
-                          <EyeOff className="w-4 h-4 text-neutral-500" />
-                        )}
-                        <span className="font-medium text-neutral-700">{t('common.active')}</span>
-                      </div>
-                    </label>
-                    <span className="text-sm text-neutral-500">
-                      {form.is_active ? 'Product will be visible in POS' : 'Product will be hidden from POS'}
-                    </span>
-                  </div>
+                  </button>
                 </div>
-                {/* Modifiers Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center">
-                      <Settings className="w-5 h-5 mr-2 text-primary-600" />
-                      {t('products.modifiers')}
-                    </h3>
-                    <div className="flex items-center space-x-4">
-                      <label className="inline-flex items-center space-x-2 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={advancedJson} 
-                          onChange={e => setAdvancedJson(e.target.checked)}
-                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                        />
-                        <span className="text-sm font-medium text-neutral-700">{t('products.advancedJSON')}</span>
-                      </label>
-                      {advancedJson && (
-                        <button 
-                          className="btn btn-ghost btn-sm" 
-                          onClick={()=>setOptionsText(`[
-  {
-    "name": "Size",
-    "required": true,
-    "max_select": 1,
-    "options": [
-      { "name": "Small",  "price_delta": 0 },
-      { "name": "Medium", "price_delta": 0.5 },
-      { "name": "Large",  "price_delta": 1 }
-    ]
-  },
-  {
-    "name": "Add-ons",
-    "required": false,
-    "max_select": 3,
-    "options": [
-      { "name": "Cheese", "price_delta": 0.5 },
-      { "name": "Bacon",  "price_delta": 1 }
-    ]
-  }
-]`)}
-                        >
-                          {t('products.insertExample')}
-                        </button>
-                      )}
-                      {editing && editing.id && (
-                        <Link 
-                          className="btn btn-secondary btn-sm" 
-                          to={`/modifiers?assignType=product&assignId=${editing.id}`}
-                        >
-                          <Settings className="w-4 h-4" />
-                          {t('products.manageAssignments')}
-                        </Link>
-                      )}
-                    </div>
-                  </div>
 
-                  {!advancedJson ? (
-                    <div className="space-y-4">
-                      {optGroups.length === 0 ? (
-                        <div className="text-center py-8 bg-neutral-50 rounded-2xl">
-                          <Settings className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                          <p className="text-neutral-500 text-sm">{t('products.noModifiersYet')}</p>
-                          <button 
-                            className="btn btn-primary btn-sm mt-3" 
-                            onClick={()=> setOptGroups([{ name: '', required: false, max_select: 1, options: [] }])}
-                          >
-                            <Plus className="w-4 h-4" />
-                            {t('products.addGroup')}
-                          </button>
+                <div className="flex-1 overflow-y-auto p-6">
+                  {activeTab === 'basic' ? (
+                    <div className="space-y-6">
+                      {/* Basic Information */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-neutral-900 flex items-center">
+                          <Package className="w-5 h-5 mr-2 text-primary-600" />
+                          Basic Information
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                              <Code className="w-4 h-4 inline mr-2" />
+                              {t('products.code')}
+                            </label>
+                            <input 
+                              value={form.code} 
+                              onChange={e => onChange('code', e.target.value)} 
+                              className="input" 
+                              placeholder="Enter product code"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                              <Package className="w-4 h-4 inline mr-2" />
+                              {t('products.name')}
+                            </label>
+                            <input 
+                              value={form.name} 
+                              onChange={e => onChange('name', e.target.value)} 
+                              className="input" 
+                              placeholder="Enter product name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                              <Tag className="w-4 h-4 inline mr-2" />
+                              {t('products.category')}
+                            </label>
+                            <select 
+                              value={form.category_id} 
+                              onChange={e => onChange('category_id', e.target.value)} 
+                              className="input"
+                            >
+                              <option value="">Select category</option>
+                              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                              <DollarSign className="w-4 h-4 inline mr-2" />
+                              {t('products.price')}
+                            </label>
+                            <input 
+                              value={form.price} 
+                              onChange={e => onChange('price', e.target.value)} 
+                              className="input" 
+                              type="number" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                              <Image className="w-4 h-4 inline mr-2" />
+                              Image URL (optional)
+                            </label>
+                            <input 
+                              value={form.image_url} 
+                              onChange={e => onChange('image_url', e.target.value)} 
+                              className="input" 
+                              placeholder="https://example.com/image.jpg"
+                            />
+                          </div>
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {optGroups.map((g, gi) => (
-                            <div key={gi} className="card p-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <input 
-                                  className="input flex-1 mr-4" 
-                                  placeholder={t('products.groupNamePlaceholder')} 
-                                  value={g.name} 
-                                  onChange={e=>{
-                                    const v = e.target.value; 
-                                    setOptGroups(prev => prev.map((gg, i)=> i===gi? { ...gg, name: v }: gg));
-                                  }} 
-                                />
-                                <button 
-                                  className="btn btn-danger btn-sm" 
-                                  onClick={()=> setOptGroups(prev => prev.filter((_, i)=> i!==gi))}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  {t('products.removeGroup')}
-                                </button>
-                              </div>
-                              
-                              <div className="flex items-center space-x-4 mb-4">
-                                <label className="inline-flex items-center space-x-2 cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={!!g.required} 
-                                    onChange={e=>{
-                                      const v = e.target.checked; 
-                                      setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, required: v }: gg));
-                                    }}
-                                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                                  />
-                                  <span className="text-sm font-medium text-neutral-700">{t('products.required')}</span>
-                                </label>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium text-neutral-700">{t('products.maxSelect')}</span>
-                                  <input 
-                                    type="number" 
-                                    min={1} 
-                                    step={1} 
-                                    className="input w-20" 
-                                    value={g.max_select ?? 1} 
-                                    onChange={e=>{
-                                      const v = Math.max(1, Number(e.target.value||1)); 
-                                      setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, max_select: v }: gg));
-                                    }} 
-                                  />
-                                </div>
-                              </div>
 
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-semibold text-neutral-700">Options</h4>
-                                {(g.options || []).map((o, oi) => (
-                                  <div key={oi} className="flex items-center space-x-3 p-3 bg-neutral-50 rounded-xl">
-                                    <input 
-                                      className="input flex-1" 
-                                      placeholder={t('products.optionNamePlaceholder')} 
-                                      value={o.name} 
-                                      onChange={e=>{
-                                        const v = e.target.value; 
-                                        setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, options: gg.options.map((oo,j)=> j===oi? { ...oo, name: v }: oo) }: gg));
-                                      }} 
-                                    />
-                                    <div className="flex items-center space-x-2">
-                                      <DollarSign className="w-4 h-4 text-neutral-500" />
-                                      <input 
-                                        type="number" 
-                                        step={0.01} 
-                                        className="input w-24" 
-                                        value={Number(o.price_delta || 0)} 
-                                        onChange={e=>{
-                                          const v = Number(e.target.value || 0); 
-                                          setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, options: gg.options.map((oo,j)=> j===oi? { ...oo, price_delta: v }: oo) }: gg));
-                                        }} 
-                                        placeholder="0.00"
-                                      />
-                                    </div>
-                                    <button 
-                                      className="btn btn-ghost btn-sm text-danger-600" 
-                                      onClick={()=> setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, options: gg.options.filter((_,j)=> j!==oi) }: gg))}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ))}
-                                <button 
-                                  className="btn btn-ghost btn-sm" 
-                                  onClick={()=> setOptGroups(prev => prev.map((gg,i)=> i===gi? { ...gg, options: [...(gg.options||[]), { name: '', price_delta: 0 }] }: gg))}
-                                >
-                                  <Plus className="w-4 h-4" />
-                                  {t('products.addOption')}
-                                </button>
-                              </div>
+                        {/* Active Status */}
+                        <div className="flex items-center space-x-3 p-4 bg-neutral-50 rounded-2xl">
+                          <label className="inline-flex items-center space-x-3 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={form.is_active} 
+                              onChange={e => onChange('is_active', e.target.checked)}
+                              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                            />
+                            <div className="flex items-center space-x-2">
+                              {form.is_active ? (
+                                <Eye className="w-4 h-4 text-success-600" />
+                              ) : (
+                                <EyeOff className="w-4 h-4 text-neutral-500" />
+                              )}
+                              <span className="font-medium text-neutral-700">{t('common.active')}</span>
                             </div>
-                          ))}
-                          <button 
-                            className="btn btn-secondary" 
-                            onClick={()=> setOptGroups(prev => [...prev, { name: '', required: false, max_select: 1, options: [] }])}
-                          >
-                            <Plus className="w-4 h-4" />
-                            {t('products.addGroup')}
-                          </button>
+                          </label>
+                          <span className="text-sm text-neutral-500">
+                            {form.is_active ? 'Product will be visible in POS' : 'Product will be hidden from POS'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Validation Message */}
+                      {!isValid && (
+                        <div className="flex items-center space-x-2 p-4 bg-danger-50 border border-danger-200 rounded-xl">
+                          <X className="w-5 h-5 text-danger-600" />
+                          <span className="text-sm text-danger-800 font-medium">{t('products.validationMessage')}</span>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div>
-                      <textarea 
-                        value={optionsText} 
-                        onChange={e=>setOptionsText(e.target.value)} 
-                        className="input min-h-[200px] font-mono text-sm" 
-                        placeholder={t('products.jsonPlaceholder')}
-                      />
-                      <p className="text-xs text-neutral-500 mt-2">{t('products.modifiersNote')}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Printer Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center">
-                      <Printer className="w-5 h-5 mr-2 text-primary-600" />
-                      {t('settings.printerSettings.title')}
-                    </h3>
-                    <label className="inline-flex items-center space-x-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={printerSettings.enabled} 
-                        onChange={e => setPrinterSettings(prev => ({ 
-                          ...prev, 
-                          enabled: e.target.checked, 
-                          printer_ids: e.target.checked ? prev.printer_ids : [] 
-                        }))}
-                        className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                      />
-                      <span className="font-medium text-neutral-700">{t('settings.printerSettings.enableCustomPrinting')}</span>
-                    </label>
-                  </div>
-                  
-                  {printerSettings.enabled && (
-                    <div className="card p-4">
-                      <div className="text-sm text-neutral-600 mb-3">{t('settings.printerSettings.selectPrinters')}</div>
-                      {printers.length === 0 ? (
-                        <div className="text-center py-4">
-                          <Printer className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-                          <p className="text-sm text-neutral-500">{t('settings.printerSettings.noPrintersAvailable')}</p>
-                        </div>
+                    <div className="space-y-6">
+                      {editing && editing.id ? (
+                        <ModifierAssignment entityType="product" entityId={editing.id} />
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {printers.map((printer: Printer) => (
-                            <label key={printer.id} className="flex items-center space-x-3 p-3 border border-neutral-200 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors duration-200">
-                              <input
-                                type="checkbox"
-                                checked={printerSettings.printer_ids.includes(printer.id)}
-                                onChange={e => {
-                                  const isChecked = e.target.checked;
-                                  setPrinterSettings(prev => ({
-                                    ...prev,
-                                    printer_ids: isChecked 
-                                      ? [...prev.printer_ids, printer.id]
-                                      : prev.printer_ids.filter(id => id !== printer.id)
-                                  }));
-                                }}
-                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                              />
-                              <div className="flex items-center space-x-2">
-                                <Printer className="w-4 h-4 text-neutral-500" />
-                                <div>
-                                  <div className="font-medium text-neutral-900">{printer.name}</div>
-                                  <div className="text-xs text-neutral-500">
-                                    {t(`settings.printerSettings.locations.${printer.location}`)} - {printer.type}
-                                  </div>
-                                </div>
-                              </div>
-                            </label>
-                          ))}
+                        <div className="text-center py-12 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200">
+                          <Save className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+                          <h3 className="text-lg font-medium text-neutral-900">Save Product First</h3>
+                          <p className="text-neutral-500 max-w-xs mx-auto mt-1">
+                            Please save the basic information before assigning modifiers to this product.
+                          </p>
                         </div>
                       )}
-                      <p className="text-xs text-neutral-500 mt-3">
-                        {t('settings.printerSettings.customPrintingNote')}
-                      </p>
                     </div>
                   )}
                 </div>
-
-                {/* Validation Message */}
-                {!isValid && (
-                  <div className="flex items-center space-x-2 p-4 bg-danger-50 border border-danger-200 rounded-xl">
-                    <X className="w-5 h-5 text-danger-600" />
-                    <span className="text-sm text-danger-800 font-medium">{t('products.validationMessage')}</span>
-                  </div>
-                )}
               </div>
 
               {/* Modal Footer */}

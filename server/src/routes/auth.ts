@@ -23,7 +23,7 @@ router.post('/login', async (req, res) => {
       ok = stored === password;
       if (ok && !(user as any).password_hash) {
         const newHash = bcrypt.hashSync(password, 10);
-        await db.run('UPDATE users SET password_hash = ?, password = NULL WHERE id = ?', [newHash, (user as any).id]);
+        await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, (user as any).id]);
       }
     } else {
       ok = false;

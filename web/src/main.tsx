@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './styles.css'
 import { AuthProvider } from './core/auth'
+import { SettingsProvider } from './contexts/SettingsContext'
 import './i18n'
 
 // Ensure fetch calls go to the correct API base when running in Capacitor/Android
@@ -28,7 +29,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <App />
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

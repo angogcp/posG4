@@ -16,6 +16,7 @@ import { router as couponsRouter } from './routes/coupons.js';
 import { initDb, getDb } from './lib/db.js';
 import { requireAuth } from './middleware/auth.js';
 import { router as modifiersRouter } from './routes/modifiers.js';
+import { router as tablesRouter } from './routes/tables.js';
 import printRouter from './routes/print.js';
 
 const SQLiteStore = SQLiteStoreFactory(session);
@@ -115,8 +116,12 @@ app.use('/api/users', usersRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/coupons', couponsRouter);
 app.use('/api/modifiers', modifiersRouter);
+app.use('/api/tables', tablesRouter);
 app.use('/api/print', printRouter);
 app.use('/api/printers', printRouter);
+
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Serve built frontend if available (for same-origin mobile/web usage)
 try {

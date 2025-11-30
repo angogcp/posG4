@@ -325,13 +325,13 @@ const PrinterManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+      <div className="card p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-neutral-200 rounded w-1/4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-neutral-200 rounded"></div>
+            <div className="h-4 bg-neutral-200 rounded"></div>
+            <div className="h-4 bg-neutral-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -339,15 +339,17 @@ const PrinterManagement: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Printer className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">{t('printers.management')}</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-primary-50 text-primary-600 rounded-xl">
+            <Printer className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-900">{t('printers.management')}</h2>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" />
           {t('printers.addPrinter')}
@@ -356,33 +358,34 @@ const PrinterManagement: React.FC = () => {
 
       {/* Printer Form */}
       {showForm && (
-        <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-          <h3 className="text-lg font-medium mb-4">
+        <div className="card p-6 border-primary-100 ring-4 ring-primary-50/50">
+          <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-primary-500 rounded-full"></div>
             {editingPrinter ? t('printers.editPrinter') : t('printers.addPrinter')}
           </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('printers.name')} *
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                  {t('printers.name')} <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                   placeholder={t('printers.namePlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('printers.type')} *
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                  {t('printers.type')} <span className="text-danger-500">*</span>
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                 >
                   <option value="thermal">{t('printers.thermal')}</option>
                   <option value="inkjet">{t('printers.inkjet')}</option>
@@ -390,13 +393,13 @@ const PrinterManagement: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('printers.location')} *
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                  {t('printers.location')} <span className="text-danger-500">*</span>
                 </label>
                 <select
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                 >
                   <option value="kitchen">{t('printers.kitchen')}</option>
                   <option value="cashier">{t('printers.cashier')}</option>
@@ -405,13 +408,13 @@ const PrinterManagement: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('printers.connectionType')} *
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                  {t('printers.connectionType')} <span className="text-danger-500">*</span>
                 </label>
                 <select
                   value={formData.connection_type}
                   onChange={(e) => setFormData({ ...formData, connection_type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                 >
                   <option value="wifi">{t('printers.wifi')}</option>
                   <option value="ethernet">{t('printers.ethernet')}</option>
@@ -422,55 +425,55 @@ const PrinterManagement: React.FC = () => {
               </div>
               {(formData.connection_type === 'wifi' || formData.connection_type === 'ethernet') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-neutral-700 mb-2">
                     {t('printers.ipAddress')}
                   </label>
                   <input
                     type="text"
                     value={formData.ip_address}
                     onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input"
                     placeholder="192.168.1.100"
                   />
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
                   {t('printers.port')}
                 </label>
                 <input
                   type="number"
                   value={formData.port}
                   onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) || 9100 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                   placeholder="9100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">
                   {t('printers.paperWidth')} (mm)
                 </label>
                 <select
                   value={formData.paper_width}
                   onChange={(e) => setFormData({ ...formData, paper_width: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                 >
                   <option value={58}>58mm</option>
                   <option value={80}>80mm</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="btn btn-primary"
               >
                 {editingPrinter ? t('common.update') : t('common.create')}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                className="btn btn-ghost"
               >
                 {t('common.cancel')}
               </button>
@@ -480,99 +483,103 @@ const PrinterManagement: React.FC = () => {
       )}
 
       {/* Printers List */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4">
         {printers.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Printer className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>{t('printers.noPrinters')}</p>
+          <div className="card p-12 text-center">
+            <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Printer className="w-8 h-8 text-neutral-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-900 mb-1">{t('printers.noPrinters')}</h3>
+            <p className="text-neutral-500">{t('printers.addFirst') || 'Add your first printer to get started'}</p>
           </div>
         ) : (
           printers.map((printer) => (
-            <div key={printer.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
+            <div key={printer.id} className="card p-5 hover:border-primary-200 transition-all duration-300 group">
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-medium text-gray-900">{printer.name}</h3>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-lg font-bold text-neutral-900">{printer.name}</h3>
                     <div className="flex items-center gap-2">
                       {printer.is_active ? (
-                        <div className="flex items-center gap-1">
-                          <Check className="w-4 h-4 text-green-500" />
-                          <span className="text-sm text-green-600">{t('common.active')}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-success-50 text-success-700 border border-success-100">
+                          <Check className="w-3 h-3" />
+                          {t('common.active')}
+                        </span>
                       ) : (
-                        <div className="flex items-center gap-1">
-                          <X className="w-4 h-4 text-red-500" />
-                          <span className="text-sm text-red-600">{t('common.inactive')}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
+                          <X className="w-3 h-3" />
+                          {t('common.inactive')}
+                        </span>
                       )}
-                      {/* 打印机健康状态 */}
+                      {/* Printer Status */}
                       {renderPrinterStatus(printer)}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center gap-1">
-                      <Printer className="w-4 h-4" />
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-neutral-600 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Printer className="w-4 h-4 text-neutral-400" />
                       <span>{t(`printers.${printer.type}`)}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       {getLocationIcon()}
                       <span>{t(`printers.${printer.location}`)}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       {getConnectionIcon(printer.connection_type)}
                       <span>{t(`printers.${printer.connection_type}`)}</span>
                     </div>
-                    <div>
-                      <span>{printer.paper_width}mm</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono bg-neutral-100 px-1.5 rounded text-xs">{printer.paper_width}mm</span>
                     </div>
                   </div>
+
                   {printer.ip_address && (
-                    <div className="mb-2 text-sm text-gray-500">
-                      {t('printers.ipAddress')}: {printer.ip_address}:{printer.port}
+                    <div className="flex items-center gap-2 text-sm text-neutral-500 bg-neutral-50 inline-flex px-3 py-1.5 rounded-lg border border-neutral-100">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success-500"></div>
+                      {t('printers.ipAddress')}: <span className="font-mono">{printer.ip_address}:{printer.port}</span>
                     </div>
                   )}
+                  
                   {printer.health?.lastError && (
-                    <div className="text-sm text-red-600 bg-red-50 rounded p-2">
-                      <strong>最近错误:</strong> {printer.health.lastError}
+                    <div className="mt-3 text-sm text-danger-600 bg-danger-50 rounded-lg p-3 border border-danger-100 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <span className="font-semibold">Error:</span> {printer.health.lastError}
+                      </div>
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-2">
+
+                <div className="flex flex-col gap-2 ml-4">
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEdit(printer)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
                       title={t('common.edit')}
                     >
                       <Edit className="w-4 h-4" />
                     </button>
+
                     <button
                       onClick={() => testConnection(printer.id)}
                       disabled={testingPrinter === printer.id}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                      title="测试连接"
+                      className="p-2 text-success-600 hover:bg-success-50 rounded-xl transition-colors disabled:opacity-50"
+                      title={t('printers.testConnection')}
                     >
-                      {testingPrinter === printer.id ? (
-                        <Activity className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <TestTube className="w-4 h-4" />
-                      )}
+                      <Activity className={`w-4 h-4 ${testingPrinter === printer.id ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                       onClick={() => diagnose(printer.id)}
                       disabled={diagnosingPrinter === printer.id}
-                      className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors disabled:opacity-50"
-                      title="诊断打印机"
+                      className="p-2 text-warning-600 hover:bg-warning-50 rounded-xl transition-colors disabled:opacity-50"
+                      title={t('printers.diagnose')}
                     >
-                      {diagnosingPrinter === printer.id ? (
-                        <Activity className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Wrench className="w-4 h-4" />
-                      )}
+                      <Wrench className={`w-4 h-4 ${diagnosingPrinter === printer.id ? 'animate-pulse' : ''}`} />
                     </button>
                     <button
                       onClick={() => handleDelete(printer.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      className="p-2 text-danger-600 hover:bg-danger-50 rounded-xl transition-colors text-right"
                       title={t('common.delete')}
                     >
                       <Trash2 className="w-4 h-4" />

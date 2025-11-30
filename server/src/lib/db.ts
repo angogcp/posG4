@@ -234,6 +234,19 @@ export async function initDb() {
     CREATE UNIQUE INDEX IF NOT EXISTS u_modifier_assignment ON modifier_assignments(modifier_id, entity_type, entity_id);
   `);
 
+  // Tables management
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS tables (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      capacity INTEGER DEFAULT 4,
+      status TEXT DEFAULT 'available', -- 'available', 'occupied', 'reserved'
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Lightweight migrations for new columns
   try {
     const productCols = await database.all("PRAGMA table_info(products)");
@@ -267,6 +280,20 @@ export async function initDb() {
     }
   } catch (err) {
     console.warn('Warning: unable to ensure categories.options_json column', err);
+  }
+
+  // Add table_number and pax to orders
+  try {
+    const orderCols = await database.all("PRAGMA table_info(orders)");
+    const colNames = Array.isArray(orderCols) ? new Set(orderCols.map((c: any) => c.name)) : new Set<string>();
+    if (!colNames.has('table_number')) {
+      await database.run("ALTER TABLE orders ADD COLUMN table_number TEXT");
+    }
+    if (!colNames.has('pax')) {
+      await database.run("ALTER TABLE orders ADD COLUMN pax INTEGER DEFAULT 0");
+    }
+  } catch (err) {
+    console.warn('Warning: unable to ensure orders columns for table/pax', err);
   }
 
   // 打印机表高级配置字段迁移

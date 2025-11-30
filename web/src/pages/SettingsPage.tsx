@@ -21,12 +21,17 @@ import {
   Copy,
   Move,
   Image,
-  Scissors
+  Scissors,
+  Trash2,
+  Edit,
+  DollarSign
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../contexts/SettingsContext';
 import PrinterManagement from '../components/PrinterManagement';
 import PrintTemplateManager from '../components/PrintTemplateManager';
 import PrintQueueManager from '../components/PrintQueueManager';
+import TableManagement from '../components/TableManagement';
 
 interface PrinterInfo {
   id: string;
@@ -41,10 +46,12 @@ interface PrinterInfo {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+  const { reloadSettings, formatCurrency, currencySymbol } = useSettings();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [taxRate, setTaxRate] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState('store');
   // Coupons state
@@ -53,22 +60,6 @@ export default function SettingsPage() {
   const [newCoupon, setNewCoupon] = useState<CouponItem>({ code: '', type: 'percent', value: 0, label: '', enabled: true });
   const [savingCouponKey, setSavingCouponKey] = useState<string | null>(null);
   const [couponSaved, setCouponSaved] = useState<string | null>(null);
-  
-  // Printer settings state
-  const [thermalPrintEnabled, setThermalPrintEnabled] = useState(() => {
-    return localStorage.getItem('thermalPrintEnabled') === 'true';
-  });
-  const [printerStatus, setPrinterStatus] = useState<'connected' | 'disconnected' | 'checking'>('disconnected');
-  const [availablePrinters, setAvailablePrinters] = useState<PrinterInfo[]>([]);
-  const [selectedPrinter, setSelectedPrinter] = useState('');
-  const [printerSettings, setPrinterSettings] = useState({
-    paperWidth: '80mm',
-    fontSize: 'normal',
-    printLogo: false,
-    autoCut: true,
-    copies: 1,
-    margins: { top: 2, right: 2, bottom: 2, left: 2 }
-  });
 
   useEffect(() => {
     axios.get('/api/settings').then(r => {
@@ -77,6 +68,7 @@ export default function SettingsPage() {
       setAddress(data['store.address'] || data.address || '');
       setPhone(data['store.phone'] || data.phone || '');
       setTaxRate(data['tax.rate'] || '');
+      setCurrency(data['store.currency'] || 'USD');
       // parse coupons
       const items: CouponItem[] = [];
       Object.entries(data as Record<string, string | number | undefined>).forEach(([k, v]) => {
@@ -92,31 +84,6 @@ export default function SettingsPage() {
       });
       setCoupons(items);
     });
-    
-    // Load printer settings
-    const savedPrinter = localStorage.getItem('selectedPrinter') || '';
-    setSelectedPrinter(savedPrinter);
-    
-    const savedSettings = localStorage.getItem('printerSettings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setPrinterSettings(prev => ({
-          ...prev,
-          ...parsed,
-          margins: { top: 2, right: 2, bottom: 2, left: 2, ...(parsed?.margins || {}) },
-          copies: Number.isFinite(Number(parsed?.copies)) && Number(parsed?.copies) > 0 ? Number(parsed.copies) : 1
-        }));
-      } catch (e) {
-        console.error('Failed to parse printer settings:', e);
-      }
-    }
-    
-    // Check printer status on load
-    if (thermalPrintEnabled) {
-      checkPrinterStatus();
-      fetchAvailablePrinters();
-    }
   }, []);
 
   function parseCouponValue(val: string): { type: 'percent' | 'amount'; value: number; label?: string } | null {
@@ -139,8 +106,10 @@ export default function SettingsPage() {
       'store.name': name,
       'store.address': address,
       'store.phone': phone,
-      'tax.rate': taxRate
+      'tax.rate': taxRate,
+      'store.currency': currency
     });
+    await reloadSettings();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -191,177 +160,247 @@ export default function SettingsPage() {
     setNewCoupon({ code: '', type: 'percent', value: 0, label: '', enabled: true });
   }
 
-  // Printer functions
-  const checkPrinterStatus = async () => {
-    setPrinterStatus('checking');
-    try {
-      const response = await fetch('/api/print/status');
-      if (response.ok) {
-        const data = await response.json();
-        setPrinterStatus(data.connected ? 'connected' : 'disconnected');
-      } else {
-        setPrinterStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Failed to check printer status:', error);
-      setPrinterStatus('disconnected');
-    }
-  };
-
-  const fetchAvailablePrinters = async () => {
-    try {
-      const response = await fetch('/api/printers');
-      if (response.ok) {
-        const data = await response.json();
-        const allPrinters = data.data || data || [];
-        setAvailablePrinters(Array.isArray(allPrinters) ? allPrinters : []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch available printers:', error);
-    }
-  };
-
-  const handleTestPrint = async () => {
-    try {
-      const response = await fetch('/api/print/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          printer: selectedPrinter,
-          settings: printerSettings
-        })
-      });
-      
-      if (response.ok) {
-        alert('Test print sent successfully!');
-      } else {
-        alert('Test print failed. Please check printer connection.');
-      }
-    } catch (error) {
-      console.error('Test print failed:', error);
-      alert('Test print failed. Please check printer connection.');
-    }
-  };
-
-  const savePrinterSettings = () => {
-    localStorage.setItem('thermalPrintEnabled', thermalPrintEnabled.toString());
-    localStorage.setItem('selectedPrinter', selectedPrinter);
-    localStorage.setItem('printerSettings', JSON.stringify(printerSettings));
-    alert('Printer settings saved!');
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-neutral-50 p-4 lg:p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Settings className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-900">系统设置</h1>
-              <p className="text-sm text-neutral-500">
-                配置您的商店设置和首选项
-              </p>
-            </div>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200">
+            <Settings className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900">{t('settings.title') || 'Settings'}</h1>
+            <p className="text-neutral-500">Manage your store preferences and devices</p>
           </div>
         </div>
         
         {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
-              <button
-                onClick={() => setActiveTab('store')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'store'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Store className="w-4 h-4" />
-                  商店信息
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('coupons')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'coupons'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Ticket className="w-4 h-4" />
-                  优惠券管理
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('printers')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'printers'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
-                  打印机管理
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('templates')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'templates'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  模板管理
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('queue')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'queue'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  打印队列
-                </div>
-              </button>
-            </nav>
-          </div>
+        <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
+          {[
+            { id: 'store', icon: Store, label: 'Store Info' },
+            { id: 'tables', icon: MapPin, label: 'Table Management' },
+            { id: 'coupons', icon: Ticket, label: 'Coupons' },
+            { id: 'printers', icon: Printer, label: 'Printers' },
+            { id: 'templates', icon: FileText, label: 'Templates' },
+            { id: 'queue', icon: Activity, label: 'Print Queue' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all
+                ${activeTab === tab.id 
+                  ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
+                  : 'bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200'}
+              `}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'printers' && <PrinterManagement />}
-        {activeTab === 'templates' && <PrintTemplateManager />}
-        {activeTab === 'queue' && <PrintQueueManager />}
-        
-        {/* Store and Coupon tabs - simplified for now */}
-        {activeTab === 'store' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">商店信息设置</h2>
-            <p className="text-gray-600">商店基本信息配置功能</p>
-          </div>
-        )}
-        
-        {activeTab === 'coupons' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">优惠券管理</h2>
-            <p className="text-gray-600">优惠券和促销代码管理功能</p>
-          </div>
-        )}
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 lg:p-8">
+          {activeTab === 'tables' && <TableManagement />}
+          {activeTab === 'printers' && <PrinterManagement />}
+          {activeTab === 'templates' && <PrintTemplateManager />}
+          {activeTab === 'queue' && <PrintQueueManager />}
+          
+          {activeTab === 'store' && (
+            <div className="max-w-2xl space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-neutral-900">Store Information</h2>
+                  <p className="text-sm text-neutral-500">Basic details shown on receipts</p>
+                </div>
+                <div className="w-10 h-10 bg-primary-50 rounded-full flex items-center justify-center">
+                  <Building className="w-5 h-5 text-primary-600" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Store Name</label>
+                  <div className="relative">
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <input 
+                      value={name} onChange={e => setName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                      placeholder="e.g. My Awesome Cafe"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Address</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <input 
+                      value={address} onChange={e => setAddress(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                      placeholder="e.g. 123 Main St, City"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <input 
+                      value={phone} onChange={e => setPhone(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                      placeholder="e.g. +1 234 567 890"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tax Rate (%)</label>
+                  <div className="relative">
+                    <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <input 
+                      type="number" step="0.1"
+                      value={taxRate} onChange={e => setTaxRate(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                      placeholder="0.0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Currency</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <select 
+                      value={currency} onChange={e => setCurrency(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all appearance-none"
+                    >
+                      <option value="USD">US Dollar ($)</option>
+                      <option value="EUR">Euro (€)</option>
+                      <option value="GBP">British Pound (£)</option>
+                      <option value="MYR">Malaysian Ringgit (RM)</option>
+                      <option value="JPY">Japanese Yen (¥)</option>
+                      <option value="CNY">Chinese Yuan (¥)</option>
+                      <option value="SGD">Singapore Dollar (S$)</option>
+                      <option value="AUD">Australian Dollar (A$)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={save}
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 transition-all font-medium shadow-lg shadow-primary-200"
+                  >
+                    {saved ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                    {saved ? 'Saved Successfully' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'coupons' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-neutral-900">Coupons & Discounts</h2>
+                  <p className="text-sm text-neutral-500">Manage promo codes and automatic discounts</p>
+                </div>
+                <div className="w-10 h-10 bg-accent-50 rounded-full flex items-center justify-center">
+                  <Ticket className="w-5 h-5 text-accent-600" />
+                </div>
+              </div>
+
+              {/* Add New Coupon */}
+              <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 space-y-4">
+                <h3 className="font-medium text-neutral-900 flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Create New Coupon
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <input 
+                    placeholder="Code (e.g. SAVE10)" 
+                    value={newCoupon.code} 
+                    onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
+                    className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <select 
+                      value={newCoupon.type} 
+                      onChange={e => setNewCoupon({...newCoupon, type: e.target.value as any})}
+                      className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 outline-none"
+                    >
+                      <option value="percent">Percentage (%)</option>
+                      <option value="amount">Fixed Amount ({currencySymbol})</option>
+                    </select>
+                    <input 
+                      type="number" 
+                      placeholder="Value" 
+                      value={newCoupon.value || ''} 
+                      onChange={e => setNewCoupon({...newCoupon, value: parseFloat(e.target.value)})}
+                      className="w-24 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 outline-none"
+                    />
+                  </div>
+                  <input 
+                    placeholder="Label (Optional)" 
+                    value={newCoupon.label || ''} 
+                    onChange={e => setNewCoupon({...newCoupon, label: e.target.value})}
+                    className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 outline-none"
+                  />
+                  <button 
+                    onClick={addNewCoupon}
+                    disabled={!newCoupon.code || !newCoupon.value}
+                    className="px-4 py-2 bg-accent-600 text-white rounded-lg text-sm font-medium hover:bg-accent-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md shadow-accent-200"
+                  >
+                    Add Coupon
+                  </button>
+                </div>
+              </div>
+
+              {/* Coupon List */}
+              <div className="space-y-3">
+                {coupons.filter(c => c.enabled).map((c, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row items-center justify-between p-4 bg-white border border-neutral-200 rounded-xl hover:border-accent-300 transition-colors group">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="w-10 h-10 bg-accent-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Percent className="w-5 h-5 text-accent-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-lg text-neutral-900">{c.code}</span>
+                          <span className="px-2 py-0.5 bg-neutral-100 text-neutral-600 text-xs rounded-md font-medium">
+                            {c.type === 'percent' ? `${c.value}% OFF` : `-${formatCurrency(c.value)}`}
+                          </span>
+                        </div>
+                        {c.label && <p className="text-sm text-neutral-500">{c.label}</p>}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto justify-end">
+                      {couponSaved === c.code && <span className="text-xs text-success-600 font-medium mr-2">Saved!</span>}
+                      <button 
+                        onClick={() => disableCoupon(c.code)}
+                        className="p-2 text-neutral-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                        title="Delete Coupon"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {coupons.filter(c => c.enabled).length === 0 && (
+                  <div className="text-center py-12 text-neutral-400">
+                    <Ticket className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p>No active coupons</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

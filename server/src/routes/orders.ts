@@ -15,6 +15,7 @@ router.get('/', requireAuth, async (req, res) => {
   const startDate = (req.query.start_date ?? '').toString().trim(); // format: YYYY-MM-DD
   const endDate = (req.query.end_date ?? '').toString().trim();     // format: YYYY-MM-DD
   const statusParam = (req.query.status ?? '').toString().trim();   // e.g. "open,preparing"
+  const paymentStatus = (req.query.payment_status ?? '').toString().trim(); // 'paid' | 'unpaid'
 
   let page = parseInt((req.query.page ?? '1').toString(), 10);
   let pageSize = parseInt((req.query.pageSize ?? '20').toString(), 10);
@@ -52,6 +53,12 @@ router.get('/', requireAuth, async (req, res) => {
     }
   }
 
+  if (paymentStatus === 'paid') {
+    where.push('paid_amount >= total_amount');
+  } else if (paymentStatus === 'unpaid') {
+    where.push('paid_amount < total_amount');
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   // Total count
@@ -76,7 +83,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, async (req, res) => {
-  const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount, status: order_status } = req.body as any;
+  const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount, status: order_status, table_number, pax } = req.body as any;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'No items provided' });
@@ -92,10 +99,10 @@ router.post('/', requireAuth, async (req, res) => {
 
   try {
     const insertOrderSql = `
-      INSERT INTO orders (order_number, user_id, subtotal, discount_amount, tax_amount, total_amount, paid_amount, payment_method, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO orders (order_number, user_id, subtotal, discount_amount, tax_amount, total_amount, paid_amount, payment_method, status, table_number, pax)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    const orderResult = await db.run(insertOrderSql, [orderNo, userId, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, statusToUse]);
+    const orderResult = await db.run(insertOrderSql, [orderNo, userId, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, statusToUse, table_number || null, pax || 0]);
     const orderId = orderResult.lastID;
 
     for (const it of items) {
@@ -128,8 +135,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.json({ ok: true, data: { order_id: orderId, order_number: orderNo, total_amount: total, status: statusToUse } });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create order' });
+    console.error('Failed to create order:', err);
+    res.status(500).json({ error: 'Failed to create order: ' + (err as Error).message });
   }
 });
 
@@ -156,4 +163,99 @@ router.put('/:orderId/items/:itemId/status', requireAuth, async (req, res) => {
   if (!item) return res.status(404).json({ error: 'Order item not found' });
   await db.run('UPDATE order_items SET status = ? WHERE id = ?', [status, itemId]);
   res.json({ ok: true });
+});
+
+// Process payment for an order
+router.post('/:id/pay', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const { paid_amount, payment_method } = req.body as any;
+
+  if (paid_amount == null || !payment_method) {
+    return res.status(400).json({ error: 'paid_amount and payment_method are required' });
+  }
+
+  const db = getDb();
+  const order = await db.get('SELECT * FROM orders WHERE id = ?', [id]);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  try {
+    await db.run('BEGIN TRANSACTION');
+
+    // Update order with payment details and status
+    await db.run(
+      'UPDATE orders SET paid_amount = ?, payment_method = ?, status = ? WHERE id = ?',
+      [paid_amount, payment_method, 'completed', id]
+    );
+
+    // Insert into payments table
+    await db.run(
+      'INSERT INTO payments (order_id, amount, method) VALUES (?, ?, ?)',
+      [id, paid_amount, payment_method]
+    );
+
+    await db.run('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await db.run('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Payment processing failed' });
+  }
+});
+
+// Add items to existing order
+router.post('/:id/items', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const { items, subtotal = 0, tax_amount = 0, total_amount = 0, discount_amount = 0 } = req.body as any;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'No items provided' });
+  }
+
+  const db = getDb();
+  const order = await db.get('SELECT * FROM orders WHERE id = ?', [id]);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  try {
+    await db.run('BEGIN TRANSACTION');
+
+    // Insert new items
+    for (const it of items) {
+      let optionsStr: string | null = null;
+      if (it.options_json !== undefined) {
+        try {
+          if (typeof it.options_json === 'string') {
+            if (it.options_json.trim() !== '') { JSON.parse(it.options_json); optionsStr = it.options_json; }
+          } else {
+            optionsStr = JSON.stringify(it.options_json);
+          }
+        } catch (e) {
+          // Ignore invalid json
+        }
+      }
+
+      await db.run(
+        `INSERT INTO order_items (order_id, product_id, product_code, product_name, quantity, unit_price, total_price, options_json, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, it.product_id, it.product_code, it.product_name, it.quantity, it.unit_price, it.quantity * it.unit_price, optionsStr, 'pending']
+      );
+    }
+
+    // Update order totals
+    await db.run(
+      `UPDATE orders 
+       SET subtotal = subtotal + ?, 
+           tax_amount = tax_amount + ?, 
+           total_amount = total_amount + ?,
+           discount_amount = discount_amount + ?
+       WHERE id = ?`,
+      [subtotal, tax_amount, total_amount, discount_amount, id]
+    );
+
+    await db.run('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await db.run('ROLLBACK');
+    console.error('Failed to add items to order:', err);
+    res.status(500).json({ error: 'Failed to add items to order' });
+  }
 });

@@ -714,6 +714,29 @@ router.post('/receipt', [
     const margins = { top: 2, right: 2, bottom: 2, left: 2, ...(settings?.margins || {}) };
 
     // 如果启用智能路由且items包含product_id，则使用智能打印
+    const db = getDb();
+
+    // Get system settings for currency formatting
+    const settingsRows = await db.all('SELECT key, value FROM settings');
+    const sysSettings: Record<string, string> = {};
+    for (const r of settingsRows as any[]) sysSettings[(r as any).key] = (r as any).value;
+
+    const currency = sysSettings['currency'] || 'USD';
+    const locale = sysSettings['locale'] || 'en-US';
+
+    let formatter: Intl.NumberFormat;
+    try {
+      formatter = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currency,
+      });
+    } catch (e) {
+      formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      });
+    }
+
     if (use_smart_routing && itemsNormalized.length > 0 && itemsNormalized[0].product_id) {
       // 转换为智能打印格式
       const order_items = itemsNormalized.map((item: any) => ({
@@ -722,8 +745,6 @@ router.post('/receipt', [
         quantity: item.quantity,
         price: item.price ?? item.unit_price ?? 0
       }));
-      
-      const db = getDb();
       
       // 获取所有活跃的打印机
       const activePrinters = await getAllPrinters();
@@ -764,15 +785,19 @@ router.post('/receipt', [
         }
         
         // 构建该打印机的小票数据
+        const groupTotal = (groupItems as any[]).reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0);
         const receiptData = {
           order_id: orderIdNormalized,
           items: groupItems.map((item: any) => ({
             name: item.name || `Product ${item.product_id}`,
             quantity: item.quantity,
             price: item.price,
-            total: item.quantity * item.price
+            formatted_price: formatter.format(item.price),
+            total: item.quantity * item.price,
+            formatted_total: formatter.format(item.quantity * item.price)
           })),
-          total: (groupItems as any[]).reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0),
+          total: groupTotal,
+          formatted_total: formatter.format(groupTotal),
           customer_info,
           printer_location: printerInfo.location,
           timestamp: new Date().toISOString(),
@@ -809,10 +834,18 @@ router.post('/receipt', [
     } else {
       // 传统打印模式：打印到默认打印机
       console.log('Traditional printing receipt with options:', { copies, margins, requested_printer: printer });
+
+      const itemsWithFormatting = itemsNormalized.map((item: any) => ({
+        ...item,
+        formatted_price: formatter.format(item.price ?? item.unit_price ?? 0),
+        formatted_total: formatter.format((item.price ?? item.unit_price ?? 0) * (item.quantity ?? 1))
+      }));
+
       console.log('Traditional printing receipt payload:', {
         order_id: orderIdNormalized,
-        items: itemsNormalized,
+        items: itemsWithFormatting,
         total: totalNormalized,
+        formatted_total: formatter.format(totalNormalized),
         customer_info,
         timestamp: new Date().toISOString()
       });

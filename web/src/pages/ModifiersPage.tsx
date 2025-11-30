@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Modifier {
   id: number;
@@ -33,6 +34,7 @@ interface Category { id: number; name: string; is_active: number }
 interface Product { id: number; name: string; code?: string; is_active: number }
 
 export default function ModifiersPage() {
+  const { formatCurrency } = useSettings();
   const [list, setList] = useState<Modifier[]>([]);
   const [loading, setLoading] = useState(false);
   const [includeInactive, setIncludeInactive] = useState(true);
@@ -417,7 +419,7 @@ export default function ModifiersPage() {
                       {formOptions.map((fo, idx) => (
                         <tr key={idx} className="border-t">
                           <td className="p-2 font-medium">{fo.name}</td>
-                          <td className="p-2">{fo.price_delta}</td>
+                          <td className="p-2">{formatCurrency(Number(fo.price_delta))}</td>
                           <td className="p-2">{fo.sort_order}</td>
                           <td className="p-2">{fo.is_active ? <span className="text-green-600">Active</span> : <span className="text-gray-400">Disabled</span>}</td>
                           <td className="p-2 text-right">
@@ -495,7 +497,7 @@ export default function ModifiersPage() {
                           ) : (
                             <>
                               <td className="p-2 font-medium">{o.name}</td>
-                              <td className="p-2">{o.price_delta}</td>
+                              <td className="p-2">{formatCurrency(Number(o.price_delta))}</td>
                               <td className="p-2">{o.sort_order}</td>
                               <td className="p-2">{o.is_active ? <span className="text-green-600">Active</span> : <span className="text-gray-400">Disabled</span>}</td>
                               <td className="p-2 text-right space-x-2">

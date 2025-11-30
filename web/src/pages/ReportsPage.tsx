@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Totals { orders_count: number; subtotal: number; discount_amount: number; tax_amount: number; total_amount: number; paid_amount: number }
 interface DayPoint { day: string; total: number; orders: number }
@@ -9,6 +10,7 @@ interface TopProduct { product_id: number; product_code: string; product_name: s
 
 export default function ReportsPage() {
   const { t } = useTranslation();
+  const { formatCurrency } = useSettings();
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -76,12 +78,12 @@ export default function ReportsPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <Kpi title={t('reports.grossSales')} value={`$${(totals?.total_amount ?? 0).toFixed(2)}`} />
+        <Kpi title={t('reports.grossSales')} value={formatCurrency(totals?.total_amount ?? 0)} />
         <Kpi title={t('reports.orders')} value={`${totals?.orders_count ?? 0}`} />
-        <Kpi title={t('reports.avgOrder')} value={`$${avgOrder.toFixed(2)}`} />
-        <Kpi title={t('reports.taxCollected')} value={`$${(totals?.tax_amount ?? 0).toFixed(2)}`} />
-        <Kpi title={t('reports.discounts')} value={`$${(totals?.discount_amount ?? 0).toFixed(2)}`} />
-        <Kpi title={t('reports.subtotal')} value={`$${(totals?.subtotal ?? 0).toFixed(2)}`} />
+        <Kpi title={t('reports.avgOrder')} value={formatCurrency(avgOrder)} />
+        <Kpi title={t('reports.taxCollected')} value={formatCurrency(totals?.tax_amount ?? 0)} />
+        <Kpi title={t('reports.discounts')} value={formatCurrency(totals?.discount_amount ?? 0)} />
+        <Kpi title={t('reports.subtotal')} value={formatCurrency(totals?.subtotal ?? 0)} />
       </div>
 
       {/* Daily sales simple bar chart */}
@@ -95,7 +97,7 @@ export default function ReportsPage() {
               {byDay.map(dp => (
                 <div key={dp.day} className="flex flex-col items-center">
                   <div className="h-32 w-6 bg-gray-100 flex items-end rounded">
-                    <div className="w-full bg-green-500 rounded-b" style={{ height: `${Math.max(2, (dp.total / maxDay) * 100)}%` }} title={`$${dp.total.toFixed(2)} • ${dp.orders} orders`} />
+                    <div className="w-full bg-green-500 rounded-b" style={{ height: `${Math.max(2, (dp.total / maxDay) * 100)}%` }} title={`${formatCurrency(dp.total)} • ${dp.orders} orders`} />
                   </div>
                   <div className="text-[10px] mt-1 text-gray-600">{dp.day.slice(5)}</div>
                 </div>
@@ -125,7 +127,7 @@ export default function ReportsPage() {
                   <tr key={p.method} className="border-t">
                     <td className="p-2 capitalize">{p.method || 'unknown'}</td>
                     <td className="p-2 text-right">{p.orders}</td>
-                    <td className="p-2 text-right">${p.total.toFixed(2)}</td>
+                    <td className="p-2 text-right">{formatCurrency(p.total)}</td>
                   </tr>
                 ))
               )}
@@ -154,7 +156,7 @@ export default function ReportsPage() {
                   <tr key={tp.product_id} className="border-t">
                     <td className="p-2">{tp.product_name}</td>
                     <td className="p-2 text-right">{tp.quantity}</td>
-                    <td className="p-2 text-right">${tp.amount.toFixed(2)}</td>
+                    <td className="p-2 text-right">{formatCurrency(tp.amount)}</td>
                   </tr>
                 ))
               )}

@@ -72,7 +72,11 @@
     "orderDetails": "Order Details",
     "itemName": "Item Name",
     "unitPrice": "Unit Price",
-    "totalPrice": "Total Price"
+    "totalPrice": "Total Price",
+    "item": "Item",
+    "qty": "Qty",
+    "unit": "Unit",
+    "total": "Total"
   },
   "products": {
     "title": "Products",

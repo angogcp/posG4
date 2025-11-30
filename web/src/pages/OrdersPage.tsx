@@ -19,15 +19,36 @@ import {
   Package,
   FileText,
   RotateCcw,
-  Tag
+  Tag,
+  Users,
+  MapPin,
+  Plus
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
-interface Order { id: number; order_no?: string; order_number?: string; total_amount: number; created_at: string; subtotal?: number; discount_amount?: number; tax_amount?: number; paid_amount?: number; payment_method?: string }
+interface Order { 
+  id: number; 
+  order_no?: string; 
+  order_number?: string; 
+  total_amount: number; 
+  created_at: string; 
+  subtotal?: number; 
+  discount_amount?: number; 
+  tax_amount?: number; 
+  paid_amount?: number; 
+  payment_method?: string;
+  table_number?: string;
+  pax?: number;
+}
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../contexts/SettingsContext';
+
 interface OrderItem { id: number; product_name: string; quantity: number; unit_price: number; total_price: number }
 
 export default function OrdersPage() {
   const { t } = useTranslation();
+  const { formatCurrency, currency } = useSettings();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<{ order: Order; items: OrderItem[] } | null>(null);
@@ -43,12 +64,49 @@ export default function OrdersPage() {
   const [storeAddress, setStoreAddress] = useState<string>('');
   const [storePhone, setStorePhone] = useState<string>('');
   const [printerStatus, setPrinterStatus] = useState<'connected' | 'disconnected' | 'checking'>('disconnected');
+  const [printing, setPrinting] = useState(false);
   const [thermalPrintEnabled, setThermalPrintEnabled] = useState(() => {
     return localStorage.getItem('thermalPrintEnabled') === 'true';
   });
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('unpaid');
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  async function handleProcessPayment() {
+    if (!selectedId || !paymentAmount || processingPayment) return;
+    
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Invalid amount');
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      await axios.post(`/api/orders/${selectedId}/pay`, {
+        paid_amount: amount,
+        payment_method: paymentMethod
+      });
+      
+      // Refresh order details
+      const r = await axios.get(`/api/orders/${selectedId}`);
+      setDetail(r.data.data);
+      setPaymentModalOpen(false);
+      setPaymentAmount('');
+      
+      // Also refresh the list
+      fetchOrders();
+    } catch (e) {
+      alert('Payment failed');
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
 
   async function fetchOrders(opts?: { page?: number; pageSize?: number }) {
     const nextPage = opts?.page ?? page;
@@ -59,6 +117,8 @@ export default function OrdersPage() {
       if (query.trim()) params.q = query.trim();
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
+      if (statusFilter !== 'all') params.payment_status = statusFilter;
+
       const r = await axios.get('/api/orders', { params });
       const data = r.data?.data ?? r.data;
       setOrders(Array.isArray(data) ? data : []);
@@ -111,9 +171,15 @@ export default function OrdersPage() {
       const d = new Date(o.created_at);
       const after = !startDate || d >= new Date(startDate + 'T00:00:00');
       const before = !endDate || d <= new Date(endDate + 'T23:59:59');
-      return matchesQuery && after && before;
+      
+      let matchesStatus = true;
+      const isPaid = (o.paid_amount || 0) >= o.total_amount;
+      if (statusFilter === 'paid') matchesStatus = isPaid;
+      if (statusFilter === 'unpaid') matchesStatus = !isPaid;
+
+      return matchesQuery && after && before && matchesStatus;
     });
-  }, [orders, query, startDate, endDate]);
+  }, [orders, query, startDate, endDate, statusFilter]);
 
   async function applyFilters() {
     await fetchOrders({ page: 1, pageSize });
@@ -158,61 +224,66 @@ export default function OrdersPage() {
   };
 
   const printThermalReceipt = async (orderData: any) => {
-    if (!thermalPrintEnabled || printerStatus !== 'connected') {
-      window.print();
-      return;
-    }
-
+    setPrinting(true);
     try {
-      const receiptData = {
-        store: {
-          name: storeName || 'Store',
-          address: storeAddress || '',
-          phone: storePhone || ''
-        },
-        order: {
-          id: orderData.order.id,
-          order_number: orderData.order.order_number || orderData.order.id,
-          created_at: orderData.order.created_at,
-          subtotal: orderData.order.subtotal || 0,
-          discount_amount: orderData.order.discount_amount || 0,
-          tax_amount: orderData.order.tax_amount || 0,
-          total_amount: orderData.order.total_amount || 0,
-          paid_amount: orderData.order.paid_amount || 0,
-          payment_method: orderData.order.payment_method || 'cash'
-        },
-        items: orderData.items.map((item: any) => ({
-          name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          options: item.options || []
-        }))
-      };
-
-      // Attach printer selection and settings (includes copies and margins)
-      try {
-        const selectedPrinter = localStorage.getItem('selectedPrinter') || '';
-        const settingsRaw = localStorage.getItem('printerSettings');
-        const parsedSettings = settingsRaw ? JSON.parse(settingsRaw) : {};
-        (receiptData as any).printer = selectedPrinter;
-        (receiptData as any).settings = parsedSettings;
-      } catch (_) {}
-
-      const response = await fetch('/api/print/receipt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(receiptData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Thermal print failed');
+      if (!thermalPrintEnabled || printerStatus !== 'connected') {
+        window.print();
+        return;
       }
-    } catch (error) {
-      console.error('Thermal printing failed, falling back to browser print:', error);
-      window.print();
+
+      try {
+        const receiptData = {
+          store: {
+            name: storeName || 'Store',
+            address: storeAddress || '',
+            phone: storePhone || ''
+          },
+          order: {
+            id: orderData.order.id,
+            order_number: orderData.order.order_number || orderData.order.id,
+            created_at: orderData.order.created_at,
+            subtotal: orderData.order.subtotal || 0,
+            discount_amount: orderData.order.discount_amount || 0,
+            tax_amount: orderData.order.tax_amount || 0,
+            total_amount: orderData.order.total_amount || 0,
+            paid_amount: orderData.order.paid_amount || 0,
+            payment_method: orderData.order.payment_method || 'cash'
+          },
+          items: orderData.items.map((item: any) => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            options: item.options || []
+          }))
+        };
+
+        // Attach printer selection and settings (includes copies and margins)
+        try {
+          const selectedPrinter = localStorage.getItem('selectedPrinter') || '';
+          const settingsRaw = localStorage.getItem('printerSettings');
+          const parsedSettings = settingsRaw ? JSON.parse(settingsRaw) : {};
+          (receiptData as any).printer = selectedPrinter;
+          (receiptData as any).settings = parsedSettings;
+        } catch (_) {}
+
+        const response = await fetch('/api/print/receipt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(receiptData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Thermal print failed');
+        }
+      } catch (error) {
+        console.error('Thermal printing failed, falling back to browser print:', error);
+        window.print();
+      }
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -307,10 +378,25 @@ export default function OrdersPage() {
               />
             </div>
 
+            <div className="lg:w-48">
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                <Filter className="w-4 h-4 inline mr-2" />
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as any)}
+                className="input w-full"
+              >
+                <option value="all">All Orders</option>
+                <option value="paid">Paid Only</option>
+                <option value="unpaid">Unpaid Only</option>
+              </select>
+            </div>
+
             {/* Clear Button */}
             <div className="lg:w-auto">
               <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                <Filter className="w-4 h-4 inline mr-2" />
                 Options
               </label>
               <button
@@ -318,6 +404,7 @@ export default function OrdersPage() {
                   setQuery(''); 
                   setStartDate(''); 
                   setEndDate(''); 
+                  setStatusFilter('all');
                   setPage(1); 
                   setPageSize(20); 
                   setTotal(0); 
@@ -348,18 +435,30 @@ export default function OrdersPage() {
                 const orderDate = new Date(order.created_at);
                 const paymentIcon = order.payment_method === 'card' ? CreditCard : Banknote;
                 const PaymentIcon = paymentIcon;
+                const isPaid = (order.paid_amount || 0) >= order.total_amount;
                 
                 return (
                   <div 
                     key={order.id} 
                     onClick={() => openDetail(order.id)}
-                    className="group relative bg-white border border-neutral-200 rounded-2xl p-4 hover:shadow-lg hover:border-primary-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                    className={`group relative bg-white border rounded-2xl p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer ${
+                      isPaid ? 'border-neutral-200 hover:border-primary-200' : 'border-amber-200 hover:border-amber-400 shadow-sm'
+                    }`}
                   >
+                    {/* Status Badge */}
+                    <div className={`absolute top-4 right-4 px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      isPaid ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {isPaid ? 'PAID' : 'UNPAID'}
+                    </div>
+
                     {/* Order Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center">
-                          <Receipt className="w-4 h-4 text-primary-600" />
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                          isPaid ? 'bg-gradient-to-br from-primary-100 to-primary-200' : 'bg-gradient-to-br from-amber-100 to-amber-200'
+                        }`}>
+                          <Receipt className={`w-4 h-4 ${isPaid ? 'text-primary-600' : 'text-amber-600'}`} />
                         </div>
                         <div>
                           <h3 className="font-semibold text-neutral-900 group-hover:text-primary-700 transition-colors text-sm">
@@ -370,11 +469,28 @@ export default function OrdersPage() {
                           </p>
                         </div>
                       </div>
-                      <Eye className="w-4 h-4 text-neutral-400 group-hover:text-primary-500 transition-colors" />
                     </div>
 
                     {/* Order Details */}
                     <div className="space-y-2">
+                      {/* Table Info */}
+                      {(order.table_number || order.pax) && (
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-dashed border-neutral-200">
+                          <span className="text-xs text-neutral-600 flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            <span className="hidden xs:inline">Table</span>
+                          </span>
+                          <span className="text-sm font-bold text-neutral-800">
+                            {order.table_number || '-'}
+                            {order.pax ? (
+                              <span className="ml-1 text-xs font-normal text-neutral-500">
+                                ({order.pax} <Users className="w-3 h-3 inline -mt-0.5" />)
+                              </span>
+                            ) : ''}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Total Amount */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-neutral-600 flex items-center">
@@ -382,7 +498,7 @@ export default function OrdersPage() {
                           <span className="hidden xs:inline">Total</span>
                         </span>
                         <span className="text-base font-bold text-neutral-900">
-                          ${order.total_amount.toFixed(2)}
+                          {formatCurrency(order.total_amount)}
                         </span>
                       </div>
 
@@ -533,71 +649,136 @@ export default function OrdersPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeDetail}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-neutral-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Receipt className="w-6 h-6 text-white" />
+            <div className="sticky top-0 bg-white border-b border-neutral-200 p-4 lg:p-6 z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-center justify-between w-full lg:w-auto space-x-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <Receipt className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-neutral-900">
+                        Order #{detail?.order?.order_number || detail?.order?.order_no || selectedId}
+                      </h2>
+                      <p className="text-sm text-neutral-500">
+                        {detail?.order && new Date(detail.order.created_at).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-neutral-900">
-                      Order #{detail?.order?.order_number || detail?.order?.order_no || selectedId}
-                    </h2>
-                    <p className="text-sm text-neutral-500">
-                      {detail?.order && new Date(detail.order.created_at).toLocaleString()}
-                    </p>
-                  </div>
+                  
+                  {/* Mobile Close Button */}
+                  <button 
+                    onClick={closeDetail}
+                    className="lg:hidden p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {/* Printer Controls */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 rounded-xl">
-                    <label className="flex items-center gap-2 text-sm font-medium text-neutral-700">
-                      <input
-                        type="checkbox"
-                        checked={thermalPrintEnabled}
-                        onChange={(e) => {
-                          const enabled = e.target.checked;
+                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+                  {/* Printer Controls - Hide text on mobile to save space */}
+                  <div className="flex items-center gap-2 px-2 py-1.5 lg:px-4 lg:py-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const enabled = !thermalPrintEnabled;
                           setThermalPrintEnabled(enabled);
                           localStorage.setItem('thermalPrintEnabled', enabled.toString());
                           if (enabled) {
                             checkPrinterStatus();
                           }
                         }}
-                        className="rounded"
-                      />
-                      <Printer className="w-4 h-4" />
-                      Thermal
-                    </label>
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                          thermalPrintEnabled ? 'bg-primary-600' : 'bg-neutral-200'
+                        }`}
+                        role="switch"
+                        aria-checked={thermalPrintEnabled}
+                      >
+                        <span
+                          className={`${
+                            thermalPrintEnabled ? 'translate-x-6' : 'translate-x-1'
+                          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                        />
+                      </button>
+                        <span className="text-sm font-medium text-neutral-700 flex items-center gap-2 hidden sm:flex">
+                        <Printer className="w-4 h-4" />
+                        Thermal
+                      </span>
+                    </div>
+
                     {thermalPrintEnabled && (
-                      <div className="flex items-center gap-1">
-                        <div className={`w-2 h-2 rounded-full ${
-                          printerStatus === 'connected' ? 'bg-success-500' :
-                          printerStatus === 'checking' ? 'bg-warning-500' : 'bg-danger-500'
-                        }`}></div>
+                      <div className="flex items-center gap-2 pl-2 lg:pl-3 border-l border-neutral-200">
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${
+                          printerStatus === 'connected' ? 'bg-success-50 text-success-700' :
+                          printerStatus === 'checking' ? 'bg-warning-50 text-warning-700' : 
+                          'bg-danger-50 text-danger-700'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            printerStatus === 'connected' ? 'bg-success-500' :
+                            printerStatus === 'checking' ? 'bg-warning-500' : 'bg-danger-500'
+                          }`}></div>
+                          <span className="capitalize hidden sm:inline">{printerStatus}</span>
+                        </div>
                         <button
                           onClick={checkPrinterStatus}
                           disabled={printerStatus === 'checking'}
-                          className="p-1 hover:bg-neutral-200 rounded transition-colors"
+                          className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
                           title="Check printer status"
                         >
-                          <RefreshCw className={`w-3 h-3 ${printerStatus === 'checking' ? 'animate-spin' : ''}`} />
+                          <RefreshCw className={`w-3.5 h-3.5 ${printerStatus === 'checking' ? 'animate-spin' : ''}`} />
                         </button>
                       </div>
                     )}
                   </div>
 
+                  {(detail?.order.paid_amount || 0) < (detail?.order.total_amount || 0) && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          navigate('/pos', { state: { orderId: detail?.order.id } });
+                        }}
+                        className="btn bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-200 px-3 lg:px-4"
+                      >
+                        <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                        <span className="hidden sm:inline">Add Items</span>
+                        <span className="sm:hidden">Add</span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setPaymentAmount((detail?.order.total_amount || 0).toString());
+                          setPaymentModalOpen(true);
+                        }}
+                        className="btn bg-success-600 hover:bg-success-700 text-white shadow-lg shadow-success-200 px-3 lg:px-4"
+                      >
+                        <DollarSign className="w-4 h-4 mr-1 lg:mr-2" />
+                        Pay
+                      </button>
+                    </>
+                  )}
+
                   <button 
                     onClick={handlePrint}
-                    className="btn btn-primary"
+                    disabled={printing}
+                    className="btn btn-primary disabled:opacity-70 px-3 lg:px-4"
                   >
-                    <Printer className="w-4 h-4" />
-                    Print Receipt
+                    {printing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline ml-2">Printing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="w-4 h-4 mr-1 lg:mr-2" />
+                        <span className="hidden sm:inline">Receipt</span>
+                        <span className="sm:hidden">Print</span>
+                      </>
+                    )}
                   </button>
                   
                   <button 
                     onClick={closeDetail}
-                    className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-all"
+                    className="hidden lg:block p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-all"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -618,6 +799,29 @@ export default function OrdersPage() {
                 <div className="space-y-6">
                   {/* Order Summary Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {/* Table Info */}
+                    {(detail.order.table_number || detail.order.pax) && (
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-purple-200 rounded-lg flex items-center justify-center">
+                              <MapPin className="w-4 h-4 text-purple-700" />
+                            </div>
+                            <span className="text-sm font-medium text-purple-800">Table</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-purple-800">
+                              {detail.order.table_number || '-'}
+                            </div>
+                            {detail.order.pax ? (
+                              <div className="text-xs text-purple-600 font-medium flex items-center justify-end gap-1">
+                                {detail.order.pax} <Users className="w-3 h-3" />
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* Subtotal */}
                     <div className="bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-xl p-4">
                       <div className="flex items-center justify-between">
@@ -628,8 +832,8 @@ export default function OrdersPage() {
                           <span className="text-sm font-medium text-neutral-700">Subtotal</span>
                         </div>
                         <span className="text-lg font-bold text-neutral-900">
-                          ${(detail.order.subtotal ?? 0).toFixed(2)}
-                        </span>
+                            {formatCurrency(detail.order.subtotal ?? 0)}
+                          </span>
                       </div>
                     </div>
 
@@ -644,7 +848,7 @@ export default function OrdersPage() {
                             <span className="text-sm font-medium text-warning-800">Discount</span>
                           </div>
                           <span className="text-lg font-bold text-warning-800">
-                            -${(detail.order.discount_amount ?? 0).toFixed(2)}
+                            -{formatCurrency(detail.order.discount_amount ?? 0)}
                           </span>
                         </div>
                       </div>
@@ -661,7 +865,7 @@ export default function OrdersPage() {
                             <span className="text-sm font-medium text-info-800">Tax</span>
                           </div>
                           <span className="text-lg font-bold text-info-800">
-                            +${(detail.order.tax_amount ?? 0).toFixed(2)}
+                            +{formatCurrency(detail.order.tax_amount ?? 0)}
                           </span>
                         </div>
                       </div>
@@ -677,7 +881,7 @@ export default function OrdersPage() {
                           <span className="text-sm font-medium text-primary-800">Total</span>
                         </div>
                         <span className="text-xl font-bold text-primary-800">
-                          ${detail.order.total_amount.toFixed(2)}
+                          {formatCurrency(detail.order.total_amount)}
                         </span>
                       </div>
                     </div>
@@ -696,7 +900,7 @@ export default function OrdersPage() {
                           <span className="text-sm font-medium text-success-800">Paid</span>
                         </div>
                         <span className="text-lg font-bold text-success-800">
-                          ${(detail.order.paid_amount ?? 0).toFixed(2)}
+                          {formatCurrency(detail.order.paid_amount ?? 0)}
                         </span>
                       </div>
                     </div>
@@ -739,7 +943,7 @@ export default function OrdersPage() {
                             <span className={`text-lg font-bold ${
                               change >= 0 ? 'text-success-800' : 'text-danger-800'
                             }`}>
-                              ${Math.abs(change).toFixed(2)}
+                              {formatCurrency(Math.abs(change))}
                             </span>
                           </div>
                         </div>
@@ -777,10 +981,10 @@ export default function OrdersPage() {
                                   </span>
                                 </td>
                                 <td className="py-4 px-6 text-right font-medium text-neutral-900">
-                                  ${item.unit_price.toFixed(2)}
+                                  {formatCurrency(item.unit_price)}
                                 </td>
                                 <td className="py-4 px-6 text-right font-bold text-neutral-900">
-                                  ${item.total_price.toFixed(2)}
+                                  {formatCurrency(item.total_price)}
                                 </td>
                               </tr>
                             ))}
@@ -809,8 +1013,8 @@ export default function OrdersPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <span style={{ flex: 1, paddingRight: 6 }}>{it.product_name}</span>
                               <span style={{ width: 40, textAlign: 'right' }}>{it.quantity}x</span>
-                              <span style={{ width: 60, textAlign: 'right' }}>${it.unit_price.toFixed(2)}</span>
-                              <span style={{ width: 70, textAlign: 'right' }}>${it.total_price.toFixed(2)}</span>
+                              <span style={{ width: 60, textAlign: 'right' }}>{formatCurrency(it.unit_price)}</span>
+                              <span style={{ width: 70, textAlign: 'right' }}>{formatCurrency(it.total_price)}</span>
                             </div>
                           </div>
                         ))}
@@ -819,40 +1023,40 @@ export default function OrdersPage() {
                       <div style={{ fontSize: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span>{t('pos.subtotal')}</span>
-                          <span>${(detail.order.subtotal ?? 0).toFixed(2)}</span>
+                          <span>{formatCurrency(detail.order.subtotal ?? 0)}</span>
                         </div>
                         {(detail.order.discount_amount ?? 0) > 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>{t('pos.discount')}</span>
-                            <span>-${(detail.order.discount_amount ?? 0).toFixed(2)}</span>
+                            <span>-{formatCurrency(detail.order.discount_amount ?? 0)}</span>
                           </div>
                         )}
                         {(detail.order.tax_amount ?? 0) > 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>{t('pos.tax')}</span>
-                            <span>+${(detail.order.tax_amount ?? 0).toFixed(2)}</span>
+                            <span>+{formatCurrency(detail.order.tax_amount ?? 0)}</span>
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginTop: 4 }}>
                           <span>{t('pos.total')}</span>
-                          <span>${(detail.order.total_amount ?? 0).toFixed(2)}</span>
+                          <span>{formatCurrency(detail.order.total_amount ?? 0)}</span>
                         </div>
                         {typeof detail.order.paid_amount === 'number' && (
                           <>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <span>Paid</span>
-                              <span>${(detail.order.paid_amount ?? 0).toFixed(2)}</span>
+                              <span>{formatCurrency(detail.order.paid_amount ?? 0)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               {((detail.order.paid_amount ?? 0) - (detail.order.total_amount ?? 0)) >= 0 ? (
                                 <>
                                   <span>Change</span>
-                                  <span>${(((detail.order.paid_amount ?? 0) - (detail.order.total_amount ?? 0))).toFixed(2)}</span>
+                                  <span>{formatCurrency(((detail.order.paid_amount ?? 0) - (detail.order.total_amount ?? 0)))}</span>
                                 </>
                               ) : (
                                 <>
                                   <span>Due</span>
-                                  <span>${(Math.abs(((detail.order.paid_amount ?? 0) - (detail.order.total_amount ?? 0)))).toFixed(2)}</span>
+                                  <span>{formatCurrency(Math.abs(((detail.order.paid_amount ?? 0) - (detail.order.total_amount ?? 0))))}</span>
                                 </>
                               )}
                             </div>
@@ -866,6 +1070,83 @@ export default function OrdersPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentModalOpen && (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
+              <h3 className="font-bold text-lg">Process Payment</h3>
+              <button onClick={() => setPaymentModalOpen(false)} className="p-2 hover:bg-neutral-200 rounded-full transition-colors">
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">Payment Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`
+                      flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+                      ${paymentMethod === 'cash' 
+                        ? 'border-primary-500 bg-primary-50 text-primary-700' 
+                        : 'border-neutral-200 hover:border-primary-200 text-neutral-600'}
+                    `}
+                  >
+                    <Banknote className="w-6 h-6" />
+                    <span className="font-medium">Cash</span>
+                  </button>
+                  <button 
+                    onClick={() => setPaymentMethod('card')}
+                    className={`
+                      flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all
+                      ${paymentMethod === 'card' 
+                        ? 'border-primary-500 bg-primary-50 text-primary-700' 
+                        : 'border-neutral-200 hover:border-primary-200 text-neutral-600'}
+                    `}
+                  >
+                    <CreditCard className="w-6 h-6" />
+                    <span className="font-medium">Card</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">Amount</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-neutral-400">{currency}</span>
+                  <input 
+                    type="number" 
+                    className="w-full pl-8 pr-4 py-3 text-xl font-bold border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+                    placeholder="0.00"
+                    value={paymentAmount}
+                    onChange={e => setPaymentAmount(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setPaymentModalOpen(false)}
+                className="px-4 py-2 text-neutral-600 font-medium hover:bg-neutral-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleProcessPayment}
+                disabled={processingPayment || !paymentAmount}
+                className="px-6 py-2 bg-success-600 text-white font-bold rounded-xl shadow-lg shadow-success-200 hover:bg-success-700 disabled:opacity-50 disabled:shadow-none transition-all"
+              >
+                {processingPayment ? 'Processing...' : 'Confirm Payment'}
+              </button>
             </div>
           </div>
         </div>

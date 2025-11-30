@@ -4,6 +4,30 @@ import { requireAuth } from '../middleware/auth.js';
 
 export const router = Router();
 
+// Fetch assigned modifiers for a category
+router.get('/:id/modifiers', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const db = getDb();
+  const category = await db.get('SELECT * FROM categories WHERE id = ?', [id]);
+  if (!category) return res.status(404).json({ error: 'Category not found' });
+
+  const mods = await db.all(
+    `SELECT m.*, 'category' as source FROM modifier_assignments ma
+     JOIN modifiers m ON m.id = ma.modifier_id
+     WHERE ma.entity_type = 'category' AND ma.entity_id = ? AND m.is_active = 1
+     ORDER BY m.sort_order, m.id`,
+    [id]
+  );
+
+  const result: any[] = [];
+  for (const m of mods) {
+    const options = await db.all('SELECT * FROM modifier_options WHERE modifier_id = ? AND is_active = 1 ORDER BY sort_order, id', [m.id]);
+    result.push({ ...m, options });
+  }
+
+  res.json({ ok: true, data: result });
+});
+
 router.get('/', requireAuth, async (req, res) => {
   const { include_inactive } = req.query as { include_inactive?: string };
   const db = getDb();

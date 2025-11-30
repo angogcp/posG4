@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, FileText, Eye, Download, Upload, Save, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Eye, Download, Upload, Save, Copy, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface PrintTemplate {
@@ -277,13 +277,13 @@ const PrintTemplateManager: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="card p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-neutral-200 rounded-xl mb-6 w-1/3"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-neutral-100 rounded-xl"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -291,31 +291,33 @@ const PrintTemplateManager: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">打印模板管理</h2>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-50 rounded-xl">
+            <FileText className="w-6 h-6 text-primary-600" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-900">打印模板管理</h2>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="btn btn-primary"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 mr-2" />
           新建模板
         </button>
       </div>
 
       {/* Template Form */}
       {showForm && (
-        <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-          <h3 className="text-lg font-medium mb-4">
+        <div className="mb-6 p-6 border border-neutral-200 rounded-xl bg-neutral-50">
+          <h3 className="text-lg font-bold text-neutral-900 mb-4">
             {editingTemplate ? '编辑模板' : '创建模板'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
                   模板名称 *
                 </label>
                 <input
@@ -323,18 +325,18 @@ const PrintTemplateManager: React.FC = () => {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input w-full"
                   placeholder="输入模板名称"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
                   模板类型 *
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input w-full"
                 >
                   <option value="receipt">收银小票</option>
                   <option value="kitchen">厨房订单</option>
@@ -343,26 +345,26 @@ const PrintTemplateManager: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
                   纸张宽度
                 </label>
                 <select
                   value={formData.paper_width}
                   onChange={(e) => setFormData({ ...formData, paper_width: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input w-full"
                 >
                   <option value={58}>58mm</option>
                   <option value={80}>80mm</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
                   字体大小
                 </label>
                 <select
                   value={formData.font_size}
                   onChange={(e) => setFormData({ ...formData, font_size: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input w-full"
                 >
                   <option value="small">小号</option>
                   <option value="medium">中号</option>
@@ -373,14 +375,14 @@ const PrintTemplateManager: React.FC = () => {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-neutral-700">
                   模板内容 *
                 </label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={loadDefaultTemplate}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-primary-600 hover:text-primary-800 font-medium"
                   >
                     加载默认模板
                   </button>
@@ -394,19 +396,19 @@ const PrintTemplateManager: React.FC = () => {
                     rows={15}
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    className="input w-full font-mono text-sm"
                     placeholder="输入模板内容，使用 {变量名} 格式插入动态内容"
                   />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-700 mb-2">可用变量：</div>
-                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                  <div className="text-sm font-medium text-neutral-700 mb-2">可用变量：</div>
+                  <div className="space-y-1 max-h-80 overflow-y-auto p-2 bg-white rounded-xl border border-neutral-200">
                     {templateVariables[formData.type].map((variable) => (
                       <button
                         key={variable}
                         type="button"
                         onClick={() => insertVariable(variable)}
-                        className="block w-full text-left px-2 py-1 text-xs bg-gray-100 hover:bg-blue-100 rounded font-mono"
+                        className="block w-full text-left px-3 py-2 text-xs bg-neutral-50 hover:bg-primary-50 hover:text-primary-700 rounded-lg font-mono transition-colors border border-transparent hover:border-primary-200"
                       >
                         {variable}
                       </button>
@@ -421,25 +423,25 @@ const PrintTemplateManager: React.FC = () => {
                 type="checkbox"
                 checked={formData.is_default}
                 onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                className="mr-2"
+                className="mr-2 rounded text-primary-600 focus:ring-primary-500"
               />
-              <label className="text-sm text-gray-700">
+              <label className="text-sm text-neutral-700 select-none">
                 设为该类型的默认模板
               </label>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="btn btn-primary"
               >
-                <Save className="w-4 h-4 inline mr-2" />
-                {editingTemplate ? '更新' : '创建'}
+                <Save className="w-4 h-4 mr-2" />
+                {editingTemplate ? '更新模板' : '创建模板'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                className="btn btn-secondary"
               >
                 取消
               </button>
@@ -451,74 +453,75 @@ const PrintTemplateManager: React.FC = () => {
       {/* Templates List */}
       <div className="space-y-4">
         {templates.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-12 text-neutral-500 bg-neutral-50 rounded-xl border border-neutral-200 border-dashed">
             <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>还没有打印模板</p>
+            <p className="text-lg font-medium">还没有打印模板</p>
+            <p className="text-sm opacity-75">点击右上角新建模板</p>
           </div>
         ) : (
           templates.map((template) => (
-            <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-medium text-gray-900">{template.name}</h3>
+            <div key={template.id} className="p-4 rounded-xl border border-neutral-200 hover:shadow-md transition-all duration-200 bg-white group">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center flex-wrap gap-3 mb-2">
+                    <h3 className="text-lg font-bold text-neutral-900">{template.name}</h3>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                      <span className="px-2.5 py-1 text-xs font-medium bg-primary-50 text-primary-700 rounded-full border border-primary-100">
                         {template.type === 'receipt' ? '收银小票' : 
                          template.type === 'kitchen' ? '厨房订单' :
                          template.type === 'bar' ? '酒水订单' : '报表打印'}
                       </span>
                       {template.is_default && (
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                        <span className="px-2.5 py-1 text-xs font-medium bg-success-50 text-success-700 rounded-full border border-success-100">
                           默认
                         </span>
                       )}
                       {!template.is_active && (
-                        <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
+                        <span className="px-2.5 py-1 text-xs font-medium bg-neutral-100 text-neutral-600 rounded-full border border-neutral-200">
                           已禁用
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    纸张宽度: {template.paper_width}mm | 字体: {template.font_size === 'small' ? '小号' : template.font_size === 'medium' ? '中号' : '大号'}
+                  <div className="text-sm text-neutral-500">
+                    纸张宽度: {template.paper_width}mm <span className="mx-2">|</span> 字体: {template.font_size === 'small' ? '小号' : template.font_size === 'medium' ? '中号' : '大号'}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handlePreview(template)}
-                    className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                    className="p-2 text-success-600 hover:bg-success-50 rounded-xl transition-colors"
                     title="预览模板"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleClone(template)}
-                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                    className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
                     title="克隆模板"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => exportTemplate(template)}
-                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                    className="p-2 text-warning-600 hover:bg-warning-50 rounded-xl transition-colors"
                     title="导出模板"
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleEdit(template)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    className="p-2 text-neutral-600 hover:bg-neutral-100 rounded-xl transition-colors"
                     title="编辑模板"
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleDelete(template.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    className="p-2 text-danger-600 hover:bg-danger-50 rounded-xl transition-colors"
                     title="删除模板"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -529,21 +532,31 @@ const PrintTemplateManager: React.FC = () => {
 
       {/* Preview Modal */}
       {showPreview && previewTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">模板预览 - {previewTemplate.name}</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-neutral-100">
+              <h3 className="text-lg font-bold text-neutral-900">模板预览 - {previewTemplate.name}</h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="bg-gray-100 p-4 rounded-md">
-              <pre className="whitespace-pre-wrap font-mono text-sm">
-                {previewTemplate.content}
-              </pre>
+            <div className="p-6 overflow-y-auto bg-neutral-50 flex-1">
+              <div className="bg-white p-8 shadow-sm mx-auto" style={{ maxWidth: `${previewTemplate.paper_width === 58 ? '58mm' : '80mm'}`, minHeight: '200px' }}>
+                <pre className="whitespace-pre-wrap font-mono text-sm text-neutral-900 leading-tight">
+                  {previewTemplate.content}
+                </pre>
+              </div>
+            </div>
+            <div className="p-4 border-t border-neutral-100 bg-white flex justify-end">
+               <button
+                onClick={() => setShowPreview(false)}
+                className="btn btn-secondary"
+              >
+                关闭
+              </button>
             </div>
           </div>
         </div>
