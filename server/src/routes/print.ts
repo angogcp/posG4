@@ -149,7 +149,7 @@ async function checkPrinterHealth(printer: PrinterInfo): Promise<PrinterHealthSt
           resolve(true);
         });
         
-        socket.on('error', (err) => {
+        socket.on('error', (err: any) => {
           clearTimeout(timeout);
           lastError = err.message;
           socket.destroy();
@@ -383,7 +383,7 @@ router.post('/test-connection', [
             resolve(true);
           });
           
-          socket.on('error', (err) => {
+          socket.on('error', (err: any) => {
             clearTimeout(timeout);
             testResults.errorMessage = err.message;
             socket.destroy();
@@ -536,7 +536,7 @@ router.post('/diagnosis', [
             resolve(true);
           });
           
-          socket.on('error', (err) => {
+          socket.on('error', (err: any) => {
             clearTimeout(timeout);
             diagnosis.connectivity.errorMessage = err.message;
             socket.destroy();
@@ -764,7 +764,8 @@ router.post('/receipt', [
         // 如果没有配置打印机，使用默认打印机（第一个活跃的打印机）
         const targetPrinterIds = printerIds.length > 0 ? printerIds : [activePrinters[0].id];
         
-        for (const printerId of targetPrinterIds) {
+        for (const rawPrinterId of targetPrinterIds) {
+          const printerId = Number(rawPrinterId);
           if (!printerGroups[printerId]) {
             printerGroups[printerId] = [];
           }
@@ -1152,7 +1153,8 @@ router.post('/smart-print', [
       // 如果没有配置打印机，使用默认打印机（第一个活跃的打印机）
       const targetPrinterIds = printerIds.length > 0 ? printerIds : [activePrinters[0].id];
       
-      for (const printerId of targetPrinterIds) {
+      for (const rawPrinterId of targetPrinterIds) {
+        const printerId = Number(rawPrinterId);
         if (!printerGroups[printerId]) {
           printerGroups[printerId] = [];
         }
