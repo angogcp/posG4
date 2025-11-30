@@ -24,7 +24,10 @@ import {
   AlertCircle,
   ChevronRight,
   Utensils,
-  MapPin
+  MapPin,
+  ChevronDown,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -43,6 +46,16 @@ export default function PosPage() {
   const [tables, setTables] = useState<Table[]>([]);
   const [activeCat, setActiveCat] = useState<number | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    try {
+      return (localStorage.getItem('pos.viewMode') as 'grid' | 'list') || 'grid';
+    } catch { return 'grid'; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pos.viewMode', viewMode);
+  }, [viewMode]);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkingOut, setCheckingOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -66,6 +79,7 @@ export default function PosPage() {
   const [optionProd, setOptionProd] = useState<Product | null>(null);
   const [groupSelections, setGroupSelections] = useState<Record<number, number[]>>({});
   const [liveGroups, setLiveGroups] = useState<Record<number, OptionGroup[]>>({});
+  const [currentOptions, setCurrentOptions] = useState<OptionGroup[]>([]);
 
   // Checkout modal state
   const [showCheckout, setShowCheckout] = useState(false);
@@ -94,6 +108,23 @@ export default function PosPage() {
 
   // Add to existing order mode
   const [activeOrder, setActiveOrder] = useState<{id: number, order_number: string} | null>(null);
+
+  // Category scroll ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      const currentScroll = scrollContainerRef.current.scrollLeft;
+      const newScroll = direction === 'left' 
+        ? currentScroll - scrollAmount 
+        : currentScroll + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScroll,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   useEffect(() => {
     if (location.state?.orderId) {
@@ -283,11 +314,46 @@ export default function PosPage() {
     return [];
   }
 
-  function addToCart(p: Product) {
-    // Check if product has options or category has default options
-    const groups = effectiveGroupsForProduct(p);
+  async function addToCart(p: Product) {
+    let groups: OptionGroup[] = [];
+
+    // 1. Legacy options (from options_json)
+    // Check product-level options_json
+    if (p.options_json && Array.isArray(p.options_json)) {
+      groups = [...(p.options_json as OptionGroup[])];
+    } 
+    // Check category-level options_json (legacy)
+    else if (p.category_id) {
+      const cat = categories.find(c => c.id === p.category_id);
+      if (cat && cat.options_json && Array.isArray(cat.options_json)) {
+        groups = [...(cat.options_json as OptionGroup[])];
+      }
+    }
+
+    // 2. Fetch new modifiers from backend
+    try {
+      const res = await axios.get(`/api/products/${p.id}/modifiers`);
+      if (res.data && res.data.ok && Array.isArray(res.data.data)) {
+        const newMods = res.data.data.map((m: any) => ({
+          name: m.name,
+          // required if min_choices > 0
+          required: (m.min_choices || 0) > 0,
+          // max_select: 1 for single, else max_choices (or unlimited/high number)
+          max_select: m.selection_type === 'single' ? 1 : (m.max_choices || 99),
+          options: m.options.map((o: any) => ({
+            name: o.name,
+            price_delta: o.price_delta
+          }))
+        }));
+        groups = [...groups, ...newMods];
+      }
+    } catch (e) {
+      console.error("Failed to fetch modifiers", e);
+    }
+
     if (groups.length > 0) {
       setOptionProd(p);
+      setCurrentOptions(groups);
       setGroupSelections({});
       setOptionsModalOpen(true);
       return;
@@ -468,8 +534,7 @@ export default function PosPage() {
 
   // Option modal helpers
   function currentGroups(): OptionGroup[] {
-    if (!optionProd) return [];
-    return effectiveGroupsForProduct(optionProd);
+    return currentOptions;
   }
   const optionBasePrice = optionProd?.price ?? 0;
   const optionDelta = useMemo(() => {
@@ -545,39 +610,81 @@ export default function PosPage() {
       {/* Left Side: Catalog */}
       <div className="flex-1 flex flex-col min-w-0 gap-4 h-full">
         
-        {/* Categories Bar - Scrollable */}
-        <div className="flex-shrink-0 overflow-x-auto no-scrollbar pb-2">
-          <div className="flex gap-2">
-            <button 
-              className={`
-                flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all
-                ${activeCat === 'all' 
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-200 scale-105' 
-                  : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'}
-              `}
-              onClick={() => setActiveCat('all')}
+        {/* Categories Bar - Mobile Dropdown */}
+        <div className="lg:hidden flex-shrink-0 px-1 pb-2">
+          <div className="relative">
+            <select
+              className="w-full appearance-none bg-white border border-neutral-200 text-neutral-700 py-3 pl-4 pr-10 rounded-xl font-bold text-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              value={activeCat}
+              onChange={(e) => setActiveCat(e.target.value === 'all' ? 'all' : Number(e.target.value))}
             >
-              <Package className="w-4 h-4" />
-              {t('pos.all')}
-            </button>
-            {categories.map(c => (
-              <button 
-                key={c.id} 
-                className={`
-                  flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all
-                  ${activeCat === c.id 
-                    ? 'bg-primary-600 text-white shadow-md shadow-primary-200 scale-105' 
-                    : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'}
-                `}
-                onClick={() => setActiveCat(c.id)}
-              >
-                {c.name}
-              </button>
-            ))}
+              <option value="all">{t('pos.all')}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-neutral-500">
+              <ChevronDown className="h-5 w-5" />
+            </div>
           </div>
         </div>
 
-        {/* Search & Barcode */}
+        {/* Categories Bar - Desktop Scrollable */}
+        <div className="hidden lg:flex items-center gap-2 flex-shrink-0 pb-2">
+          <button 
+            onClick={() => scrollCategories('left')}
+            className="p-2 rounded-full bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 z-10 flex-shrink-0"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-5 h-5 text-neutral-600" />
+          </button>
+
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-x-auto no-scrollbar scroll-smooth"
+          >
+            <div className="flex gap-3 px-1">
+              <button 
+                className={`
+                  flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all select-none flex-shrink-0
+                  ${activeCat === 'all' 
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-200 scale-105' 
+                    : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'}
+                `}
+                onClick={() => setActiveCat('all')}
+              >
+                <Package className="w-4 h-4" />
+                {t('pos.all')}
+              </button>
+              {categories.map(c => (
+                <button 
+                  key={c.id} 
+                  className={`
+                    flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all select-none flex-shrink-0
+                    ${activeCat === c.id 
+                      ? 'bg-primary-600 text-white shadow-md shadow-primary-200 scale-105' 
+                      : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'}
+                  `}
+                  onClick={() => setActiveCat(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button 
+            onClick={() => scrollCategories('right')}
+            className="p-2 rounded-full bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 z-10 flex-shrink-0"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-5 h-5 text-neutral-600" />
+          </button>
+        </div>
+
+        {/* Search & Barcode & View Toggle */}
         <div className="flex-shrink-0 flex gap-3 bg-white p-3 rounded-xl shadow-sm border border-neutral-200">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
@@ -599,49 +706,109 @@ export default function PosPage() {
               onKeyDown={e => e.key === 'Enter' && handleScanSubmit()}
             />
           </div>
+          <div className="flex bg-neutral-100 p-1 rounded-lg border border-neutral-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow text-primary-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow text-primary-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+              title="List View"
+            >
+              <List className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Product Grid */}
+        {/* Product Grid/List */}
         <div className="flex-1 overflow-y-auto min-h-0 pr-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filtered.map(p => (
-              <button
-                key={p.id}
-                onClick={() => addToCart(p)}
-                className="group relative flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden text-left h-full"
-              >
-                <div className="aspect-[4/3] bg-neutral-100 relative overflow-hidden">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-neutral-300 group-hover:text-primary-200 transition-colors">
-                      <Utensils className="w-12 h-12" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="bg-white/90 p-1.5 rounded-full shadow-sm text-primary-600">
-                      <Plus className="w-4 h-4" />
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {filtered.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => addToCart(p)}
+                  className="group relative flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden text-left h-full"
+                >
+                  <div className="aspect-[4/3] bg-neutral-100 relative overflow-hidden">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-neutral-300 group-hover:text-primary-200 transition-colors">
+                        <Utensils className="w-12 h-12" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                      <div className="bg-white/90 p-1.5 rounded-full shadow-sm text-primary-600">
+                        <Plus className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
+                  <div className="p-3 flex flex-col flex-1">
+                    <h3 className="font-medium text-neutral-900 line-clamp-2 mb-1 flex-1">{p.name}</h3>
+                    <div className="flex items-baseline justify-between mt-auto">
+                      <span className="text-sm font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
+                        {formatCurrency(p.price)}
+                      </span>
+                      {p.code && <span className="text-[10px] text-neutral-400 font-mono">{p.code}</span>}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400">
+                  <Package className="w-12 h-12 mb-2 opacity-50" />
+                  <p>{t('pos.noItems') || 'No products found'}</p>
                 </div>
-                <div className="p-3 flex flex-col flex-1">
-                  <h3 className="font-medium text-neutral-900 line-clamp-2 mb-1 flex-1">{p.name}</h3>
-                  <div className="flex items-baseline justify-between mt-auto">
-                    <span className="text-sm font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {filtered.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => addToCart(p)}
+                  className="group flex items-center bg-white rounded-xl border border-neutral-200 p-2 hover:shadow-md hover:border-primary-300 transition-all duration-200 text-left"
+                >
+                  <div className="w-16 h-16 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0 mr-4">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-neutral-300 group-hover:text-primary-200 transition-colors">
+                        <Utensils className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-neutral-900 truncate text-lg">{p.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                       {p.code && <span className="text-xs text-neutral-400 font-mono bg-neutral-100 px-1.5 py-0.5 rounded">{p.code}</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 pl-4">
+                    <span className="text-lg font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg">
                       {formatCurrency(p.price)}
                     </span>
-                    {p.code && <span className="text-[10px] text-neutral-400 font-mono">{p.code}</span>}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-primary-100 text-primary-600 p-1.5 rounded-full">
+                        <Plus className="w-4 h-4" />
+                      </div>
+                    </div>
                   </div>
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+                  <Package className="w-12 h-12 mb-2 opacity-50" />
+                  <p>{t('pos.noItems') || 'No products found'}</p>
                 </div>
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400">
-                <Package className="w-12 h-12 mb-2 opacity-50" />
-                <p>{t('pos.noItems') || 'No products found'}</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Mobile Cart Trigger */}

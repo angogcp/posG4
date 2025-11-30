@@ -12,6 +12,7 @@ import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
 import ModifiersPage from './pages/ModifiersPage';
 import KitchenPage from './pages/KitchenPage';
+import CustomerMenuPage from './pages/CustomerMenuPage';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -31,6 +32,7 @@ function AdminRoute({ children }: { children: JSX.Element }) {
 export default function App() {
   return (
     <Routes>
+      <Route path="/customer/menu" element={<CustomerMenuPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/"

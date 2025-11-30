@@ -56,7 +56,11 @@
     "orderComplete": "Order Complete",
     "emptyCart": "Cart is empty",
     "selectCategory": "Select Category",
-    "allCategories": "All Categories"
+    "allCategories": "All Categories",
+    "all": "All",
+    "searchPlaceholder": "Search products...",
+    "scanPlaceholder": "Scan barcode...",
+    "noItems": "No products found"
   },
   "orders": {
     "title": "Orders",
@@ -76,7 +80,11 @@
     "item": "Item",
     "qty": "Qty",
     "unit": "Unit",
-    "total": "Total"
+    "total": "Total",
+    "searchPlaceholder": "Search orders...",
+    "from": "From",
+    "to": "To",
+    "status": "Status"
   },
   "products": {
     "title": "Products",

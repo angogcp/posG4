@@ -73,6 +73,7 @@ export default function OrdersPage() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('unpaid');
+  const [showFilters, setShowFilters] = useState(false);
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -332,7 +333,18 @@ export default function OrdersPage() {
 
         {/* Search and Filters */}
         <div className="card p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
+          <div 
+            className="flex items-center justify-between lg:hidden mb-4 cursor-pointer" 
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <div className="flex items-center gap-2 text-neutral-700">
+              <Filter className="w-4 h-4" />
+              <span className="font-semibold text-sm">Filters & Search</span>
+            </div>
+            <ChevronRight className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-90' : ''}`} />
+          </div>
+
+          <div className={`flex flex-col lg:flex-row gap-4 ${showFilters ? 'flex' : 'hidden lg:flex'}`}>
             {/* Search Input */}
             <div className="flex-1">
               <label className="block text-sm font-semibold text-neutral-700 mb-2">
@@ -346,7 +358,7 @@ export default function OrdersPage() {
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder={t('orders.searchPlaceholder')}
-                  className="input pl-10"
+                  className="input pl-10 w-full"
                 />
               </div>
             </div>
@@ -361,7 +373,7 @@ export default function OrdersPage() {
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="input"
+                className="input w-full"
               />
             </div>
             
@@ -374,14 +386,14 @@ export default function OrdersPage() {
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="input"
+                className="input w-full"
               />
             </div>
 
             <div className="lg:w-48">
               <label className="block text-sm font-semibold text-neutral-700 mb-2">
                 <Filter className="w-4 h-4 inline mr-2" />
-                Status
+                {t('orders.status')}
               </label>
               <select
                 value={statusFilter}
@@ -396,7 +408,7 @@ export default function OrdersPage() {
 
             {/* Clear Button */}
             <div className="lg:w-auto">
-              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+              <label className="block text-sm font-semibold text-neutral-700 mb-2 lg:invisible">
                 Options
               </label>
               <button
@@ -410,9 +422,9 @@ export default function OrdersPage() {
                   setTotal(0); 
                   fetchOrders({ page: 1, pageSize: 20 }); 
                 }}
-                className="btn btn-ghost"
+                className="btn btn-ghost w-full lg:w-auto"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 mr-2 lg:mr-0" />
                 {t('common.clear')}
               </button>
             </div>
@@ -430,7 +442,7 @@ export default function OrdersPage() {
               <p className="text-neutral-500 text-sm">No orders found for the selected criteria</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredOrders.map(order => {
                 const orderDate = new Date(order.created_at);
                 const paymentIcon = order.payment_method === 'card' ? CreditCard : Banknote;

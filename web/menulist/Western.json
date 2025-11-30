@@ -1,0 +1,890 @@
+{
+    "pdf_info": [
+        {
+            "para_blocks": [
+                {
+                    "type": "image",
+                    "bbox": [
+                        0,
+                        0,
+                        335,
+                        276
+                    ],
+                    "blocks": [
+                        {
+                            "bbox": [
+                                0,
+                                0,
+                                335,
+                                276
+                            ],
+                            "lines": [
+                                {
+                                    "bbox": [
+                                        0,
+                                        0,
+                                        335,
+                                        276
+                                    ],
+                                    "spans": [
+                                        {
+                                            "bbox": [
+                                                0,
+                                                0,
+                                                335,
+                                                276
+                                            ],
+                                            "type": "image",
+                                            "image_path": "26ca2bb4b2b6f90a7445f9be359b93309ae15efd42752d0740835b538bac54da.jpg"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "index": 0,
+                            "angle": 0,
+                            "type": "image_body"
+                        }
+                    ],
+                    "index": 0
+                },
+                {
+                    "type": "image",
+                    "bbox": [
+                        0,
+                        277,
+                        337,
+                        633
+                    ],
+                    "blocks": [
+                        {
+                            "bbox": [
+                                0,
+                                277,
+                                337,
+                                633
+                            ],
+                            "lines": [
+                                {
+                                    "bbox": [
+                                        0,
+                                        277,
+                                        337,
+                                        633
+                                    ],
+                                    "spans": [
+                                        {
+                                            "bbox": [
+                                                0,
+                                                277,
+                                                337,
+                                                633
+                                            ],
+                                            "type": "image",
+                                            "image_path": "d48549329e3b41096856befbe948539c980b3f3cfd5a8d093651d51d93019604.jpg"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "index": 1,
+                            "angle": 0,
+                            "type": "image_body"
+                        }
+                    ],
+                    "index": 1
+                },
+                {
+                    "type": "image",
+                    "bbox": [
+                        0,
+                        633,
+                        337,
+                        970
+                    ],
+                    "blocks": [
+                        {
+                            "bbox": [
+                                0,
+                                633,
+                                337,
+                                970
+                            ],
+                            "lines": [
+                                {
+                                    "bbox": [
+                                        0,
+                                        633,
+                                        337,
+                                        970
+                                    ],
+                                    "spans": [
+                                        {
+                                            "bbox": [
+                                                0,
+                                                633,
+                                                337,
+                                                970
+                                            ],
+                                            "type": "image",
+                                            "image_path": "a7cc85506bc06493bba12bb6f0c9c279df44d4021592fdcfe32cb25a711363ea.jpg"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "index": 2,
+                            "angle": 0,
+                            "type": "image_body"
+                        }
+                    ],
+                    "index": 2
+                },
+                {
+                    "type": "image",
+                    "bbox": [
+                        0,
+                        970,
+                        337,
+                        1280
+                    ],
+                    "blocks": [
+                        {
+                            "bbox": [
+                                0,
+                                970,
+                                337,
+                                1280
+                            ],
+                            "lines": [
+                                {
+                                    "bbox": [
+                                        0,
+                                        970,
+                                        337,
+                                        1280
+                                    ],
+                                    "spans": [
+                                        {
+                                            "bbox": [
+                                                0,
+                                                970,
+                                                337,
+                                                1280
+                                            ],
+                                            "type": "image",
+                                            "image_path": "05cd35eb100d2239bac5a4d37a9515e54530da5a5abe63adf79d80f9be4b1d06.jpg"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "index": 3,
+                            "angle": 0,
+                            "type": "image_body"
+                        }
+                    ],
+                    "index": 3
+                },
+                {
+                    "bbox": [
+                        390,
+                        29,
+                        784,
+                        92
+                    ],
+                    "type": "title",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                390,
+                                29,
+                                784,
+                                92
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        390,
+                                        29,
+                                        784,
+                                        92
+                                    ],
+                                    "type": "text",
+                                    "content": "WESTERN"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 4
+                },
+                {
+                    "bbox": [
+                        351,
+                        136,
+                        815,
+                        172
+                    ],
+                    "type": "title",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                136,
+                                815,
+                                172
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        136,
+                                        815,
+                                        172
+                                    ],
+                                    "type": "text",
+                                    "content": "SIZZLING/PLATE CHOP"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 5
+                },
+                {
+                    "bbox": [
+                        351,
+                        190,
+                        842,
+                        229
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                190,
+                                842,
+                                229
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        190,
+                                        842,
+                                        229
+                                    ],
+                                    "type": "text",
+                                    "content": "chicken chop 鸡扒 16"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 6
+                },
+                {
+                    "bbox": [
+                        351,
+                        235,
+                        841,
+                        275
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                235,
+                                841,
+                                275
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        235,
+                                        841,
+                                        275
+                                    ],
+                                    "type": "text",
+                                    "content": "pork chop 猪扒 19"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 7
+                },
+                {
+                    "bbox": [
+                        351,
+                        280,
+                        841,
+                        318
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                280,
+                                841,
+                                318
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        280,
+                                        841,
+                                        318
+                                    ],
+                                    "type": "text",
+                                    "content": "lamb chop 羊扒 24"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 8
+                },
+                {
+                    "bbox": [
+                        351,
+                        323,
+                        841,
+                        363
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                323,
+                                841,
+                                363
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        323,
+                                        841,
+                                        363
+                                    ],
+                                    "type": "text",
+                                    "content": "tonkatsu chop 炸猪扒 19"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 9
+                },
+                {
+                    "bbox": [
+                        351,
+                        368,
+                        841,
+                        408
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                368,
+                                841,
+                                408
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        368,
+                                        841,
+                                        408
+                                    ],
+                                    "type": "text",
+                                    "content": "chicken katsu chop 炸鸡扒 17"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 10
+                },
+                {
+                    "bbox": [
+                        351,
+                        413,
+                        841,
+                        453
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                413,
+                                841,
+                                453
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        413,
+                                        841,
+                                        453
+                                    ],
+                                    "type": "text",
+                                    "content": "fish and chip 炸鱼扒 16"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 11
+                },
+                {
+                    "bbox": [
+                        351,
+                        458,
+                        841,
+                        497
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                458,
+                                841,
+                                497
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        458,
+                                        841,
+                                        497
+                                    ],
+                                    "type": "text",
+                                    "content": "salmon chop 三文鱼扒 26"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 12
+                },
+                {
+                    "bbox": [
+                        351,
+                        503,
+                        841,
+                        542
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                503,
+                                841,
+                                542
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        503,
+                                        841,
+                                        542
+                                    ],
+                                    "type": "text",
+                                    "content": "mixed chop 杂扒 29"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 13
+                },
+                {
+                    "bbox": [
+                        351,
+                        586,
+                        602,
+                        622
+                    ],
+                    "type": "title",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                351,
+                                586,
+                                602,
+                                622
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        351,
+                                        586,
+                                        602,
+                                        622
+                                    ],
+                                    "type": "text",
+                                    "content": "SPAGHETTI"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 14
+                },
+                {
+                    "bbox": [
+                        356,
+                        648,
+                        834,
+                        686
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                648,
+                                834,
+                                686
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        648,
+                                        834,
+                                        686
+                                    ],
+                                    "type": "text",
+                                    "content": "chicken鸡肉 13"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 15
+                },
+                {
+                    "bbox": [
+                        356,
+                        693,
+                        834,
+                        733
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                693,
+                                834,
+                                733
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        693,
+                                        834,
+                                        733
+                                    ],
+                                    "type": "text",
+                                    "content": "sausage ham 火腿肠 13"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 16
+                },
+                {
+                    "bbox": [
+                        356,
+                        738,
+                        834,
+                        778
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                738,
+                                834,
+                                778
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        738,
+                                        834,
+                                        778
+                                    ],
+                                    "type": "text",
+                                    "content": "pork 猪肉 15"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 17
+                },
+                {
+                    "bbox": [
+                        356,
+                        783,
+                        834,
+                        820
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                783,
+                                834,
+                                820
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        783,
+                                        834,
+                                        820
+                                    ],
+                                    "type": "text",
+                                    "content": "smoked duck 烟鸭 13"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 18
+                },
+                {
+                    "bbox": [
+                        356,
+                        826,
+                        834,
+                        864
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                826,
+                                834,
+                                864
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        826,
+                                        834,
+                                        864
+                                    ],
+                                    "type": "text",
+                                    "content": "fried fish 炸鱼 13"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 19
+                },
+                {
+                    "bbox": [
+                        356,
+                        871,
+                        834,
+                        907
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                871,
+                                834,
+                                907
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        871,
+                                        834,
+                                        907
+                                    ],
+                                    "type": "text",
+                                    "content": "ebifried炸虾 15"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 20
+                },
+                {
+                    "bbox": [
+                        356,
+                        913,
+                        834,
+                        957
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                356,
+                                913,
+                                834,
+                                957
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        356,
+                                        913,
+                                        834,
+                                        957
+                                    ],
+                                    "type": "text",
+                                    "content": "croquettevege 素可乐饼 13"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 21
+                },
+                {
+                    "bbox": [
+                        353,
+                        976,
+                        503,
+                        1012
+                    ],
+                    "type": "title",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                353,
+                                976,
+                                503,
+                                1012
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        353,
+                                        976,
+                                        503,
+                                        1012
+                                    ],
+                                    "type": "text",
+                                    "content": "SAUCE"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 22
+                },
+                {
+                    "bbox": [
+                        349,
+                        1030,
+                        875,
+                        1112
+                    ],
+                    "type": "text",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                349,
+                                1030,
+                                875,
+                                1112
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        349,
+                                        1030,
+                                        875,
+                                        1112
+                                    ],
+                                    "type": "text",
+                                    "content": "mushroom,black pepper,mint,basil,white sauce,tomato, parsley"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 23
+                }
+            ],
+            "discarded_blocks": [
+                {
+                    "bbox": [
+                        395,
+                        1172,
+                        722,
+                        1241
+                    ],
+                    "type": "footer",
+                    "angle": 0,
+                    "lines": [
+                        {
+                            "bbox": [
+                                395,
+                                1172,
+                                722,
+                                1241
+                            ],
+                            "spans": [
+                                {
+                                    "bbox": [
+                                        395,
+                                        1172,
+                                        722,
+                                        1241
+                                    ],
+                                    "type": "text",
+                                    "content": "Add RM3 for set with free drinks, bread and soup"
+                                }
+                            ]
+                        }
+                    ],
+                    "index": 24
+                }
+            ],
+            "page_size": [
+                904,
+                1280
+            ],
+            "page_idx": 0
+        }
+    ],
+    "_backend": "vlm",
+    "_version_name": "2.6.4"
+}

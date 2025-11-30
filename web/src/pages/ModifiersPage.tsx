@@ -60,8 +60,9 @@ export default function ModifiersPage() {
     name: '', description: '', selection_type: 'single', min_choices: '0', max_choices: '', sort_order: '0', is_active: true,
   });
   // New: staged options for create/edit modal
-  const [formOptions, setFormOptions] = useState<Array<{ name: string; price_delta: string; sort_order: string; is_active: boolean }>>([]);
+  const [formOptions, setFormOptions] = useState<Array<{ id?: number; name: string; price_delta: string; sort_order: string; is_active: boolean }>>([]);
   const [formOptDraft, setFormOptDraft] = useState<{ name: string; price_delta: string; sort_order: string; is_active: boolean }>({ name: '', price_delta: '0', sort_order: '0', is_active: true });
+  const [deletedOptionIds, setDeletedOptionIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,12 +117,13 @@ export default function ModifiersPage() {
     setEditing(null);
     setForm({ name: '', description: '', selection_type: 'single', min_choices: '0', max_choices: '', sort_order: '0', is_active: true });
     setFormOptions([]);
+    setDeletedOptionIds([]);
     setFormOptDraft({ name: '', price_delta: '0', sort_order: '0', is_active: true });
     setError(null);
     setShowEdit(true);
   }
 
-  function openEdit(m: Modifier) {
+  async function openEdit(m: Modifier) {
     setEditing(m);
     setForm({
       name: m.name || '',
@@ -132,10 +134,25 @@ export default function ModifiersPage() {
       sort_order: String(m.sort_order ?? 0),
       is_active: !!m.is_active,
     });
-    setFormOptions([]); // allow adding new options during edit (optional)
+    setFormOptions([]);
+    setDeletedOptionIds([]);
     setFormOptDraft({ name: '', price_delta: '0', sort_order: '0', is_active: true });
     setError(null);
     setShowEdit(true);
+
+    try {
+      const r = await axios.get(`/api/modifiers/${m.id}/options`);
+      const opts: ModifierOption[] = r.data.data || r.data;
+      setFormOptions(opts.map(o => ({
+        id: o.id,
+        name: o.name,
+        price_delta: String(o.price_delta),
+        sort_order: String(o.sort_order),
+        is_active: !!o.is_active
+      })));
+    } catch (e) {
+      console.error("Failed to load options", e);
+    }
   }
 
   // Add helpers to manage staged options in the modal
@@ -146,6 +163,10 @@ export default function ModifiersPage() {
     setFormOptDraft({ name: '', price_delta: '0', sort_order: '0', is_active: true });
   }
   function removeFormOption(idx: number) {
+    const opt = formOptions[idx];
+    if (opt.id) {
+      setDeletedOptionIds(prev => [...prev, opt.id!]);
+    }
     setFormOptions(prev => prev.filter((_, i) => i !== idx));
   }
 
@@ -175,14 +196,29 @@ export default function ModifiersPage() {
         modifierId = created.id;
         setList(prev => [created, ...prev]);
       }
-      // If there are staged options, create them now
-      if (modifierId && formOptions.length > 0) {
-        await Promise.all(formOptions.map(opt => axios.post(`/api/modifiers/${modifierId}/options`, {
-          name: opt.name.trim(),
-          price_delta: Number(opt.price_delta) || 0,
-          sort_order: Number(opt.sort_order) || 0,
-          is_active: opt.is_active,
-        })));
+      // Handle options (create, update, delete)
+      if (modifierId) {
+        // Deletions
+        if (deletedOptionIds.length > 0) {
+          await Promise.all(deletedOptionIds.map(id => axios.delete(`/api/modifiers/options/${id}`)));
+        }
+
+        // Updates & Creates
+        if (formOptions.length > 0) {
+          await Promise.all(formOptions.map(opt => {
+            const payload = {
+              name: opt.name.trim(),
+              price_delta: Number(opt.price_delta) || 0,
+              sort_order: Number(opt.sort_order) || 0,
+              is_active: opt.is_active,
+            };
+            if (opt.id) {
+              return axios.put(`/api/modifiers/options/${opt.id}`, payload);
+            } else {
+              return axios.post(`/api/modifiers/${modifierId}/options`, payload);
+            }
+          }));
+        }
         // Refresh the modifier list to show updated options count
         await load();
       }

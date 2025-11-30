@@ -17,6 +17,7 @@ import { initDb, getDb } from './lib/db.js';
 import { requireAuth } from './middleware/auth.js';
 import { router as modifiersRouter } from './routes/modifiers.js';
 import { router as tablesRouter } from './routes/tables.js';
+import { router as customerRouter } from './routes/customer.js';
 import printRouter from './routes/print.js';
 
 const SQLiteStore = SQLiteStoreFactory(session);
@@ -33,6 +34,7 @@ app.use(morgan('dev'));
 // CORS: during development allow Vite dev server on 5173/5186/5190 and 127.0.0.1 variants
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:5176',
   'http://localhost:5186',
   'http://localhost:5190',
@@ -117,6 +119,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/coupons', couponsRouter);
 app.use('/api/modifiers', modifiersRouter);
 app.use('/api/tables', tablesRouter);
+app.use('/api/customer', customerRouter);
 app.use('/api/print', printRouter);
 app.use('/api/printers', printRouter);
 

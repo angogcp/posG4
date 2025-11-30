@@ -56,7 +56,11 @@
     "orderComplete": "订单完成",
     "emptyCart": "购物车为空",
     "selectCategory": "选择分类",
-    "allCategories": "全部分类"
+    "allCategories": "全部分类",
+    "all": "全部",
+    "searchPlaceholder": "搜索商品...",
+    "scanPlaceholder": "扫描条形码...",
+    "noItems": "未找到商品"
   },
   "orders": {
     "title": "订单管理",
@@ -72,7 +76,11 @@
     "orderDetails": "订单详情",
     "itemName": "商品名称",
     "unitPrice": "单价",
-    "totalPrice": "总价"
+    "totalPrice": "总价",
+    "searchPlaceholder": "搜索订单...",
+    "from": "开始日期",
+    "to": "结束日期",
+    "status": "状态"
   },
   "products": {
     "title": "商品管理",
