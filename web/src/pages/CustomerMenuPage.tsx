@@ -15,7 +15,9 @@ export default function CustomerMenuPage() {
   
   const [tableNumber, setTableNumber] = useState(searchParams.get('table') || '');
   const [pax, setPax] = useState(searchParams.get('pax') || '1');
-  const [showWelcome, setShowWelcome] = useState(true);
+  // Initialize showWelcome based on whether tableNumber is present
+  const [showWelcome, setShowWelcome] = useState(!searchParams.get('table'));
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
@@ -27,8 +29,13 @@ export default function CustomerMenuPage() {
   // Fetch Menu
   useEffect(() => {
     loadMenu();
-    if (tableNumber) setShowWelcome(false);
-  }, []);
+    // If table param is present, ensure we don't show welcome
+    if (searchParams.get('table')) {
+      setShowWelcome(false);
+      setTableNumber(searchParams.get('table') || '');
+      setPax(searchParams.get('pax') || '1');
+    }
+  }, [searchParams]);
 
   async function loadMenu() {
     try {

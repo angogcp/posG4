@@ -79,25 +79,50 @@ router.post('/orders', async (req, res) => {
     const userId = await getCustomerUserId();
 
     const subtotal = items.reduce((sum: number, it: any) => sum + it.quantity * it.unit_price, 0);
-    // For customer orders, we generally don't apply discounts/tax on the client side, 
-    // but we accept them if the frontend calculates them (e.g. estimated tax). 
-    // Ideally, backend should recalculate, but for now we trust the payload or simple logic.
-    // Better to recalculate tax? Let's accept payload for consistency with existing POS logic for now.
-    
     const total = Math.max(0, subtotal - discount_amount + tax_amount);
-    const orderNo = `WEB-${nanoid()}`;
-    const status = 'open'; // Directly to open/kitchen
-
-    const insertOrderSql = `
-      INSERT INTO orders (order_number, user_id, subtotal, discount_amount, tax_amount, total_amount, paid_amount, payment_method, status, table_number, pax)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
     
-    const orderResult = await db.run(insertOrderSql, [
-      orderNo, userId, subtotal, discount_amount, tax_amount, total, 
-      0, 'pay_later', status, table_number, pax || 0
-    ]);
-    const orderId = orderResult.lastID;
+    // Check for existing open order for this table
+    const existingOrder = await db.get(
+      "SELECT id, order_number, subtotal, total_amount FROM orders WHERE table_number = ? AND status = 'open' LIMIT 1",
+      [table_number]
+    );
+
+    let orderId: number;
+    let orderNo: string;
+
+    if (existingOrder) {
+      // Append to existing order
+      orderId = existingOrder.id;
+      orderNo = existingOrder.order_number;
+      
+      // Update totals
+      // Note: This simple addition assumes tax/discount logic is linear or handled elsewhere.
+      // For a robust system, we should recalculate everything.
+      // For now, we'll just add the new subtotal/total to the existing ones.
+      await db.run(
+        `UPDATE orders 
+         SET subtotal = subtotal + ?, 
+             total_amount = total_amount + ?,
+             pax = ?
+         WHERE id = ?`,
+        [subtotal, total, pax || 0, orderId]
+      );
+    } else {
+      // Create new order
+      orderNo = `WEB-${nanoid()}`;
+      const status = 'open'; // Directly to open/kitchen
+
+      const insertOrderSql = `
+        INSERT INTO orders (order_number, user_id, subtotal, discount_amount, tax_amount, total_amount, paid_amount, payment_method, status, table_number, pax)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const orderResult = await db.run(insertOrderSql, [
+        orderNo, userId, subtotal, discount_amount, tax_amount, total, 
+        0, 'pay_later', status, table_number, pax || 0
+      ]);
+      orderId = orderResult.lastID;
+    }
 
     for (const it of items) {
       let optionsStr: string | null = null;
