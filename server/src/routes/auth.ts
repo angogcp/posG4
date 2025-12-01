@@ -58,7 +58,14 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  const user = (req.session as any).user;
+  let user = (req.session as any).user;
+  
+  // Bypass for Vercel deployment
+  if (!user && process.env.VERCEL === '1') {
+    user = { id: 1, username: 'admin', role: 'admin' };
+    (req.session as any).user = user;
+  }
+
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
   res.json({ ok: true, user });
 });

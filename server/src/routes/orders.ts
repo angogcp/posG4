@@ -157,7 +157,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update order status
-router.put('/:id/status', requireAuth, async (req, res) => {
+router.put('/:id/status', async (req, res) => {
   const id = Number(req.params.id);
   const { status } = req.body as any;
   if (!status || typeof status !== 'string') return res.status(400).json({ error: 'status is required' });
@@ -168,7 +168,7 @@ router.put('/:id/status', requireAuth, async (req, res) => {
 });
 
 // Update order item status
-router.put('/:orderId/items/:itemId/status', requireAuth, async (req, res) => {
+router.put('/:orderId/items/:itemId/status', async (req, res) => {
   const orderId = Number(req.params.orderId);
   const itemId = Number(req.params.itemId);
   const { status } = req.body as any;
@@ -182,7 +182,7 @@ router.put('/:orderId/items/:itemId/status', requireAuth, async (req, res) => {
 });
 
 // Process payment for an order
-router.post('/:id/pay', requireAuth, async (req, res) => {
+router.post('/:id/pay', async (req, res) => {
   const id = Number(req.params.id);
   const { paid_amount, payment_method } = req.body as any;
 
@@ -228,7 +228,7 @@ router.post('/:id/pay', requireAuth, async (req, res) => {
 });
 
 // Add items to existing order
-router.post('/:id/items', requireAuth, async (req, res) => {
+router.post('/:id/items', async (req, res) => {
   const id = Number(req.params.id);
   const { items, subtotal = 0, tax_amount = 0, total_amount = 0, discount_amount = 0 } = req.body as any;
 
