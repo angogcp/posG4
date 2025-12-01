@@ -7,16 +7,27 @@ import { AuthProvider } from './core/auth'
 import { SettingsProvider } from './contexts/SettingsContext'
 import './i18n'
 
-// Ensure fetch calls go to the correct API base when running in Capacitor/Android
+import axios from 'axios';
+
+// Ensure fetch calls go to the correct API base when running in Capacitor/Android or Local Dev
 const isCapacitor = typeof window !== 'undefined' && /^(capacitor|ionic):\/\//.test(window.location.href);
-const apiBase = (import.meta as any).env?.VITE_API_BASE || (isCapacitor ? 'http://10.0.2.2:4001' : '');
+const isDev = import.meta.env.DEV;
+const apiBase = (import.meta as any).env?.VITE_API_BASE || 
+                (isCapacitor ? 'http://10.0.2.2:4001' : (isDev ? 'http://localhost:4001' : ''));
+
+// Configure Axios global defaults
+if (apiBase) {
+  axios.defaults.baseURL = apiBase;
+}
+axios.defaults.withCredentials = true;
+
 if (apiBase) {
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     let url = input as string;
     if (typeof input === 'string' || input instanceof URL) {
       url = input.toString();
-      if (url.startsWith('/api')) {
+      if (url.startsWith('/api') && !url.startsWith('http')) {
         url = apiBase.replace(/\/$/, '') + url;
       }
     }

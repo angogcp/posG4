@@ -84,7 +84,9 @@ export default function ModifiersPage() {
   const load = useMemo(() => {
     return async () => {
       setLoading(true);
+      setError(null);
       try {
+        // Use absolute URL to avoid proxy issues locally
         const r = await axios.get('/api/modifiers', { params: {
           q: search || undefined,
           sort: sortBy,
@@ -103,6 +105,9 @@ export default function ModifiersPage() {
           setTotal(rows.length);
           setPages(1);
         }
+      } catch (err: any) {
+        console.error('Failed to load modifiers:', err);
+        setError(err.message || 'Failed to load modifiers');
       } finally {
         setLoading(false);
       }
@@ -361,6 +366,12 @@ export default function ModifiersPage() {
 
       {loading ? (
         <div>Loading...</div>
+      ) : error ? (
+        <div className="text-red-600 p-4 border border-red-300 bg-red-50 rounded mb-4">
+            <p className="font-bold">Error loading modifiers:</p>
+            <p>{error}</p>
+            <button className="mt-2 px-3 py-1 bg-red-100 hover:bg-red-200 border border-red-300 rounded text-red-800" onClick={() => window.location.reload()}>Retry</button>
+        </div>
       ) : (
         <div className="overflow-auto border rounded">
           <table className="min-w-full text-sm">

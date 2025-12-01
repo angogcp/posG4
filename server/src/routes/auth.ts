@@ -6,11 +6,17 @@ export const router = Router();
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body as { username: string; password: string };
+  console.log(`[Login] Attempt for user: ${username}`);
+
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
 
   const db = getDb();
   const user = await db.get('SELECT * FROM users WHERE username = ? AND is_active = 1', [username]);
-  if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+  
+  if (!user) {
+    console.log(`[Login] User not found or inactive: ${username}`);
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
 
   // Support bcrypt hash and gracefully handle legacy/plain text passwords to avoid 500s
   let ok = false;
@@ -28,12 +34,17 @@ router.post('/login', async (req, res) => {
     } else {
       ok = false;
     }
-  } catch {
+  } catch (err) {
+    console.error('[Login] BCrypt error:', err);
     ok = false;
   }
 
-  if (!ok) return res.status(401).json({ error: 'Invalid username or password' });
+  if (!ok) {
+    console.log(`[Login] Password mismatch for user: ${username}`);
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
 
+  console.log(`[Login] Success for user: ${username}`);
   (req.session as any).user = { id: (user as any).id, username: (user as any).username, role: (user as any).role };
   res.json({ ok: true, user: (req.session as any).user });
 });

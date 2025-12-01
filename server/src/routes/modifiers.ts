@@ -15,6 +15,9 @@ router.get('/', async (req, res) => {
   const db = getDb();
   const q = String((req.query.q as string) || '').trim();
   const includeInactive = String(req.query.include_inactive || '1') === '1';
+  
+  console.log(`[API] GET /modifiers q='${q}' includeInactive=${includeInactive}`);
+
   const sort = (req.query.sort as string) || 'sort_order';
   const order = ((req.query.order as string) || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
   const page = Math.max(1, Number(req.query.page || 1));
@@ -32,6 +35,8 @@ router.get('/', async (req, res) => {
   try {
     const totalRow = await db.get(`SELECT COUNT(*) as cnt FROM modifiers ${whereSql}`, params);
     const total = Number((totalRow as any)?.cnt || 0);
+    console.log(`[API] Found ${total} modifiers matching criteria`);
+
     const offset = (page - 1) * pageSize;
     const rows = await db.all(
       `SELECT * FROM modifiers ${whereSql} ORDER BY ${sortCol} ${order}, id ${order} LIMIT ? OFFSET ?`,
@@ -40,7 +45,7 @@ router.get('/', async (req, res) => {
     const pages = Math.max(1, Math.ceil(total / pageSize));
     res.json({ ok: true, data: rows, pagination: { total, page, pageSize, pages } });
   } catch (e) {
-    console.error(e);
+    console.error('[API] Error fetching modifiers:', e);
     res.status(500).json({ error: 'Failed to list modifiers' });
   }
 });
