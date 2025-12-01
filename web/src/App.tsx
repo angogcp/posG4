@@ -13,6 +13,7 @@ import ReportsPage from './pages/ReportsPage';
 import ModifiersPage from './pages/ModifiersPage';
 import KitchenPage from './pages/KitchenPage';
 import CustomerMenuPage from './pages/CustomerMenuPage';
+import CustomerLandingPage from './pages/CustomerLandingPage';
 import TableQRPage from './pages/TableQRPage';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/customer/menu" element={<CustomerMenuPage />} />
+      <Route path="/customer" element={<CustomerLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/"
