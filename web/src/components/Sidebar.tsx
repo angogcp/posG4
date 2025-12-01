@@ -41,7 +41,8 @@ export default function Sidebar({ isOpen, setIsOpen, mobileOpen, setMobileOpen }
     ...(user?.role === 'admin' ? [
       { path: '/reports', label: t('nav.reports'), icon: BarChart3, color: 'text-primary-500' },
       { path: '/modifiers', label: t('nav.modifiers'), icon: Sliders, color: 'text-neutral-500' },
-      { path: '/users', label: t('nav.users'), icon: Users, color: 'text-danger-500' }
+      { path: '/users', label: t('nav.users'), icon: Users, color: 'text-danger-500' },
+      { path: '/tables-qr', label: 'Table QRs', icon: Store, color: 'text-accent-500' }
     ] : []),
     { path: '/settings', label: t('nav.settings'), icon: Settings, color: 'text-neutral-500' }
   ];

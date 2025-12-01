@@ -13,6 +13,7 @@ import ReportsPage from './pages/ReportsPage';
 import ModifiersPage from './pages/ModifiersPage';
 import KitchenPage from './pages/KitchenPage';
 import CustomerMenuPage from './pages/CustomerMenuPage';
+import TableQRPage from './pages/TableQRPage';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/modifiers" element={<AdminRoute><ModifiersPage /></AdminRoute>} />
         <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/tables-qr" element={<TableQRPage />} />
       </Route>
     </Routes>
   );
