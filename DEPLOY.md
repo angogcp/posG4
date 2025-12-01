@@ -1,59 +1,38 @@
-# Deployment Guide
+# Deploying POS G4 to Vercel (Single Project)
 
-## Vercel Deployment (Frontend)
+Since you want to deploy the entire application as a single Vercel project, we have configured the repository to handle both the Backend (API) and Frontend (Web) in one go.
 
-This project consists of a **Web Frontend** (React/Vite) and a **Node.js Backend** (Express).
+## Prerequisites
 
-### ⚠️ Important Limitation: SQLite Database
-The backend currently uses **SQLite**, which stores data in a local file (`server/data/pos.sqlite3`).
-**Vercel Serverless Functions do not support persistent local file storage.**
-If you deploy the backend to Vercel, the database will reset every time the server restarts.
+1.  A Vercel account.
+2.  A Turso database (already set up).
+3.  The project pushed to a GitHub repository.
 
-### Recommended Backend Solutions
+## Deployment Steps
 
-See **[BACKEND_ALTERNATIVES.md](./BACKEND_ALTERNATIVES.md)** for detailed free options including:
-1.  **Turso** (Cloud SQLite) - *Best for Vercel*
-2.  **Fly.io** (Docker + Persistent Volume)
-3.  **Oracle Cloud** (Free VPS)
+1.  **Log in to Vercel** and click **"Add New..."** -> **"Project"**.
+2.  **Import** your GitHub repository.
+3.  **Configure Project**:
+    *   **Project Name**: e.g., `pos-g4`
+    *   **Root Directory**: Leave it as `./` (the default root).
+    *   **Framework Preset**: Vercel should detect **Vite** (because of `web/vite.config.ts` and `vercel.json` settings). If not, select **Vite**.
+    *   **Build Command**: `npm run build` (Default - this will build both server and web).
+    *   **Output Directory**: `web/dist` (We configured this in `vercel.json`).
+    *   **Environment Variables**: Add the following:
+        *   `TURSO_DATABASE_URL`: (Your Turso DB URL)
+        *   `TURSO_AUTH_TOKEN`: (Your Turso Auth Token)
+        *   `SESSION_SECRET`: (A random string)
+        *   `VERCEL`: `1`
+4.  **Deploy**.
 
-### How to Deploy Frontend to Vercel
+## How it Works
 
-1.  Push this repository to GitHub/GitLab/Bitbucket.
-2.  Import the project in Vercel.
-3.  **Project Settings**:
-    *   **Root Directory**: Select `web`.
-    *   **Framework Preset**: Vite.
-    *   **Build Command**: `npm run build`.
-    *   **Output Directory**: `dist`.
-4.  **Environment Variables**:
-    *   If your backend is hosted elsewhere, you need to configure the API proxy.
-    *   Edit `web/vercel.json` to point to your live backend URL:
-        ```json
-        {
-          "rewrites": [
-            {
-              "source": "/api/(.*)",
-              "destination": "https://YOUR-LIVE-BACKEND.com/api/$1"
-            },
-            {
-              "source": "/(.*)",
-              "destination": "/index.html"
-            }
-          ]
-        }
-        ```
+*   **Frontend**: The `web` folder is built and served as static files.
+*   **Backend**: The `api/index.ts` file acts as the entry point for Vercel Serverless Functions, which imports your Express app from `server/src/index.ts`.
+*   **Routing**: Requests to `/api/*` are routed to the backend function, while all other requests are served by the frontend.
 
-### Quick Start for Demo (Frontend Only)
+## Troubleshooting
 
-If you just want to see the UI on Vercel:
-1.  Deploy the `web` folder as described above.
-2.  Note that API calls (Login, Menu, Orders) will fail without a running backend.
-
-### Cleaning Up Data
-
-Before deployment, you can run the cleanup script to remove test orders:
-```bash
-cd server
-npm run tsx scripts/cleanup_orders.ts
-```
-(This has already been run for you).
+*   **Build Fails**: Check the build logs. Ensure `npm install` is successfully installing dependencies for both server and web (the `postinstall` script handles this).
+*   **500 Server Error on Login**: Check your Environment Variables (Turso credentials).
+*   **Database Errors**: Ensure your Turso database is active.

@@ -62,24 +62,28 @@ const isVercel = process.env.VERCEL === '1';
 const dataDir = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
 
 try {
-  if (!fs.existsSync(dataDir)) {
+  if (!fs.existsSync(dataDir) && !isVercel) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 } catch (e) {
-  // ignore if exists or cannot create; connect-sqlite3 may still handle
+  // ignore if exists or cannot create
 }
 
 // Sessions
+const sessionStore = isVercel 
+  ? new session.MemoryStore() 
+  : (new (SQLiteStore as any)({ db: 'sessions.sqlite', dir: dataDir }) as unknown as session.Store);
+
 app.use(
   session({
-    store: (new (SQLiteStore as any)({ db: 'sessions.sqlite', dir: dataDir }) as unknown) as session.Store,
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || 'dev_secret_change_me',
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      sameSite: isVercel ? 'none' : 'lax', // 'none' for cross-site if needed, but mostly for rewrites 'lax' is fine. Let's stick to lax or generic.
+      secure: isVercel, // secure true on vercel (https)
       maxAge: 1000 * 60 * 60 * 8 // 8 hours
     }
   })
