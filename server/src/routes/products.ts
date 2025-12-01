@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 export const router = Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   const { category_id, include_inactive } = req.query as { category_id?: string; include_inactive?: string };
   const db = getDb();
   // Build base WHERE clause depending on include_inactive

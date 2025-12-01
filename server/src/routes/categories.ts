@@ -28,7 +28,7 @@ router.get('/:id/modifiers', requireAuth, async (req, res) => {
   res.json({ ok: true, data: result });
 });
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   const { include_inactive } = req.query as { include_inactive?: string };
   const db = getDb();
   const rows = include_inactive
