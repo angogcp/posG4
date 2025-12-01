@@ -65,7 +65,7 @@ router.get('/products', async (req, res) => {
 
 // POST /api/customer/orders
 router.post('/orders', async (req, res) => {
-  const { items, table_number, pax, discount_amount = 0, tax_amount = 0 } = req.body as any;
+  const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount = 0, status: order_status, table_number, pax } = req.body as any;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'No items provided' });

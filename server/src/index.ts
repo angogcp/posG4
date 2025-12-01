@@ -50,6 +50,7 @@ app.use(morgan('dev'));
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:5180',
   'http://localhost:5176',
   'http://localhost:5186',
   'http://localhost:5190',
@@ -126,12 +127,32 @@ app.get('/api/debug', async (req, res) => {
   }
 });
 
-// Initialize DB
-try {
-  initDb();
-} catch(e) {
-  console.error('Failed to init DB:', e);
-}
+// Initialize DB with middleware to ensure tables exist
+let dbInitPromise: Promise<void> | null = null;
+app.use(async (req, res, next) => {
+  // Skip for non-api routes or static files if possible to save time, 
+  // but for safety let's check on all API requests
+  if (!req.path.startsWith('/api/')) return next();
+
+  if (!dbInitPromise) {
+    console.log('Initializing Database...');
+    dbInitPromise = initDb().then(() => {
+      console.log('Database Initialized');
+    }).catch(err => {
+      console.error('Failed to init DB:', err);
+      dbInitPromise = null; // Allow retry
+      throw err;
+    });
+  }
+  
+  try {
+    await dbInitPromise;
+    next();
+  } catch (err) {
+    console.error('DB Init Error during request:', err);
+    res.status(500).json({ error: 'Database initialization failed' });
+  }
+});
 
 // Routes
 app.get('/api/settings', async (_req, res) => {

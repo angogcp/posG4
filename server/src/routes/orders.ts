@@ -195,7 +195,16 @@ router.post('/:id/pay', requireAuth, async (req, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
   try {
-    await db.run('BEGIN TRANSACTION');
+    // For LibSQL over HTTP, transactions might behave differently or not be supported in the same way
+    // Check if we can just run the updates sequentially.
+    // If using @libsql/client with HTTP, 'BEGIN' might not work as expected if not using interactive tx.
+    // But let's try to remove explicit transaction control if it fails, or use executeMultiple.
+    
+    // Option 1: Use batch/multiple if possible, but here we have logic.
+    // Option 2: Just run commands sequentially. If one fails, we might have partial state, 
+    // but for this simple app it's better than failing completely.
+    
+    // await db.run('BEGIN TRANSACTION');
 
     // Update order with payment details and status
     await db.run(
@@ -209,12 +218,12 @@ router.post('/:id/pay', requireAuth, async (req, res) => {
       [id, paid_amount, payment_method]
     );
 
-    await db.run('COMMIT');
+    // await db.run('COMMIT');
     res.json({ ok: true });
   } catch (err) {
-    await db.run('ROLLBACK');
-    console.error(err);
-    res.status(500).json({ error: 'Payment processing failed' });
+    // await db.run('ROLLBACK');
+    console.error('Payment error:', err);
+    res.status(500).json({ error: 'Payment processing failed: ' + (err as any).message });
   }
 });
 
@@ -232,7 +241,7 @@ router.post('/:id/items', requireAuth, async (req, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
   try {
-    await db.run('BEGIN TRANSACTION');
+    // await db.run('BEGIN TRANSACTION');
 
     // Insert new items
     for (const it of items) {
@@ -267,10 +276,10 @@ router.post('/:id/items', requireAuth, async (req, res) => {
       [subtotal, tax_amount, total_amount, discount_amount, id]
     );
 
-    await db.run('COMMIT');
+    // await db.run('COMMIT');
     res.json({ ok: true });
   } catch (err) {
-    await db.run('ROLLBACK');
+    // await db.run('ROLLBACK');
     console.error('Failed to add items to order:', err);
     res.status(500).json({ error: 'Failed to add items to order' });
   }

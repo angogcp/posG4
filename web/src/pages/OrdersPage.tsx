@@ -102,8 +102,9 @@ export default function OrdersPage() {
       
       // Also refresh the list
       fetchOrders();
-    } catch (e) {
-      alert('Payment failed');
+    } catch (e: any) {
+      console.error(e);
+      alert('Payment failed: ' + (e.response?.data?.error || e.message));
     } finally {
       setProcessingPayment(false);
     }
