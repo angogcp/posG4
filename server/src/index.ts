@@ -20,10 +20,25 @@ import { router as tablesRouter } from './routes/tables.js';
 import { router as customerRouter } from './routes/customer.js';
 import printRouter from './routes/print.js';
 
-const SQLiteStore = SQLiteStoreFactory(session);
+// Helper to load SQLiteStore conditionally (safe for Vercel)
+let SQLiteStore: any;
+try {
+  SQLiteStore = SQLiteStoreFactory(session);
+} catch (e) {
+  console.log('Could not load connect-sqlite3, will fallback to MemoryStore');
+}
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const isVercel = process.env.VERCEL === '1';
+
+// Debug Middleware - Log all requests
+app.use((req, res, next) => {
+  if (isVercel) {
+    console.log(`[Request] ${req.method} ${req.url}`);
+  }
+  next();
+});
 
 // Basic security and parsing
 app.use(helmet());
@@ -31,7 +46,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// CORS: during development allow Vite dev server on 5173/5186/5190 and 127.0.0.1 variants
+// CORS
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -41,38 +56,38 @@ const allowedOrigins = [
   'http://127.0.0.1:5176',
   'http://127.0.0.1:5186',
   'http://127.0.0.1:5190',
-  // Allow Capacitor/Ionic default scheme and host during mobile runtime
   'capacitor://localhost',
   'ionic://localhost'
 ];
+
+// Add Vercel domain to allowed origins dynamically if needed, or rely on same-origin
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
+    if (isVercel && origin.endsWith('.vercel.app')) return callback(null, true);
     const allowed =
       allowedOrigins.includes(origin) ||
-      // Allow typical LAN hosts and emulator loopback
       /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|10\.0\.3\.2|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):\d+$/.test(origin);
     callback(null, allowed);
   },
   credentials: true
 }));
 
-// Ensure sessions data directory exists
-const isVercel = process.env.VERCEL === '1';
+// Ensure sessions data directory exists (only locally)
 const dataDir = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
-
 try {
   if (!fs.existsSync(dataDir) && !isVercel) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-} catch (e) {
-  // ignore if exists or cannot create
-}
+} catch (e) {}
 
 // Sessions
-const sessionStore = isVercel 
-  ? new session.MemoryStore() 
-  : (new (SQLiteStore as any)({ db: 'sessions.sqlite', dir: dataDir }) as unknown as session.Store);
+let sessionStore: session.Store;
+if (isVercel || !SQLiteStore) {
+  sessionStore = new session.MemoryStore();
+} else {
+  sessionStore = new (SQLiteStore as any)({ db: 'sessions.sqlite', dir: dataDir }) as unknown as session.Store;
+}
 
 app.use(
   session({
@@ -82,26 +97,54 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: isVercel ? 'none' : 'lax', // 'none' for cross-site if needed, but mostly for rewrites 'lax' is fine. Let's stick to lax or generic.
-      secure: isVercel, // secure true on vercel (https)
-      maxAge: 1000 * 60 * 60 * 8 // 8 hours
+      sameSite: isVercel ? 'none' : 'lax',
+      secure: isVercel,
+      maxAge: 1000 * 60 * 60 * 8
     }
   })
 );
 
 // Health check
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, env: process.env.NODE_ENV }));
 
-// Initialize DB and routes
-initDb();
+// Debug endpoint
+app.get('/api/debug', async (req, res) => {
+  try {
+    const db = getDb();
+    const count = await db.all('SELECT count(*) as c FROM products');
+    res.json({
+      ok: true,
+      env: {
+        VERCEL: process.env.VERCEL,
+        HAS_DB_URL: !!process.env.TURSO_DATABASE_URL
+      },
+      db_check: count,
+      url: req.url
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
+});
 
-// Settings endpoints
+// Initialize DB
+try {
+  initDb();
+} catch(e) {
+  console.error('Failed to init DB:', e);
+}
+
+// Routes
 app.get('/api/settings', requireAuth, async (_req, res) => {
-  const db = getDb();
-  const rows = await db.all('SELECT key, value FROM settings');
-  const obj: Record<string, string> = {};
-  for (const r of rows as any[]) obj[(r as any).key] = (r as any).value;
-  res.json(obj);
+  try {
+    const db = getDb();
+    const rows = await db.all('SELECT key, value FROM settings');
+    const obj: Record<string, string> = {};
+    for (const r of rows as any[]) obj[(r as any).key] = (r as any).value;
+    res.json(obj);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load settings' });
+  }
 });
 
 app.post('/api/settings', requireAuth, async (req, res) => {
@@ -134,8 +177,10 @@ app.use('/api/printers', printRouter);
 // Serve uploaded images
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Serve built frontend if available (for same-origin mobile/web usage)
+// Serve built frontend if available
 try {
+  // Adjust path for Vercel structure vs Local
+  // On Vercel, process.cwd() is the root, and web/dist might be there
   const webDist = path.resolve(process.cwd(), '..', 'web', 'dist');
   if (fs.existsSync(webDist)) {
     app.use(express.static(webDist));
@@ -145,13 +190,18 @@ try {
     });
   }
 } catch (e) {
-  // ignore static serve errors in dev
+  // ignore
 }
 
 // Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// Catch-all for debugging 404s on API
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: `API Endpoint not found: ${req.originalUrl}` });
 });
 
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
