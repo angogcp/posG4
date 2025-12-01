@@ -48,7 +48,7 @@ async function migrate() {
     // Reset sequences if possible (sqlite_sequence), but simpler to just insert with explicit IDs.
     try {
         await tursoDb.exec('DELETE FROM sqlite_sequence');
-    } catch (e) {
+    } catch (e: any) {
         console.log('Could not clear sqlite_sequence (might be fine):', e.message);
     }
 
@@ -84,7 +84,7 @@ async function migrate() {
             try {
                 await tursoDb.run(sql, values);
                 successCount++;
-            } catch (e) {
+            } catch (e: any) {
                 console.error(`  Failed to insert into ${table}:`, e.message);
             }
         }

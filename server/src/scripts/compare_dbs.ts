@@ -40,7 +40,7 @@ async function checkData() {
         const result = await tursoDb.all(`SELECT count(*) as c FROM ${table}`);
         const count = result[0] ? (result[0] as any).c : 0; 
         console.log(`${table}: ${count}`);
-      } catch (e) {
+      } catch (e: any) {
         console.log(`${table}: error ${e.message}`);
       }
     }
