@@ -104,7 +104,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Options management
-router.get('/:id/options', requireAuth, async (req, res) => {
+router.get('/:id/options', async (req, res) => {
   const id = Number(req.params.id);
   const db = getDb();
   const rows = await db.all('SELECT * FROM modifier_options WHERE modifier_id = ? ORDER BY sort_order, id', [id]);
@@ -149,7 +149,7 @@ router.delete('/options/:optionId', requireAuth, requireRole('admin'), async (re
 });
 
 // Assignments
-router.get('/:id/assignments', requireAuth, async (req, res) => {
+router.get('/:id/assignments', async (req, res) => {
   const id = Number(req.params.id);
   const db = getDb();
   const rows = await db.all('SELECT * FROM modifier_assignments WHERE modifier_id = ? ORDER BY id', [id]);
@@ -183,7 +183,7 @@ router.delete('/:id/assign', requireAuth, requireRole('admin'), async (req, res)
 });
 
 // Effective modifiers for product
-router.get('/effective/product/:productId', requireAuth, async (req, res) => {
+router.get('/effective/product/:productId', async (req, res) => {
   const productId = Number(req.params.productId);
   const db = getDb();
   const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
