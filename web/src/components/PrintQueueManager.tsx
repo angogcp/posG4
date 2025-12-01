@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle, Printer, RefreshCw, X, Play, Pause, Settings } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Printer, RefreshCw, X, Play, Pause, Settings, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface PrintJob {

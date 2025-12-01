@@ -8,6 +8,7 @@ interface SettingsContextValue {
   currencySymbol: string;
   formatCurrency: (amount: number) => string;
   reloadSettings: () => Promise<void>;
+  loading: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
