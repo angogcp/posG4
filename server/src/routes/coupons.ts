@@ -6,7 +6,7 @@ export const router = Router();
 
 // Validate a coupon code; looks up settings keys coupon.<CODE> (JSON),
 // falls back to built-in examples: SAVE10 => 10% off, OFF5 => $5 off
-router.post('/validate', requireAuth, async (req, res) => {
+router.post('/validate', async (req, res) => {
   const { code } = req.body as { code?: string };
   const trimmed = (code || '').toString().trim().toUpperCase();
   if (!trimmed) return res.status(400).json({ error: 'Missing code' });

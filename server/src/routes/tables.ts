@@ -44,7 +44,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/tables - Create a new table
-router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/', async (req, res) => {
   const { name, capacity, status } = req.body as any;
   
   if (!name || typeof name !== 'string' || !name.trim()) {
@@ -73,7 +73,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 // PUT /api/tables/:id - Update a table
-router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
   
@@ -136,7 +136,7 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 // DELETE /api/tables/:id - Soft delete a table
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
   

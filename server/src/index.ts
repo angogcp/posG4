@@ -134,7 +134,7 @@ try {
 }
 
 // Routes
-app.get('/api/settings', requireAuth, async (_req, res) => {
+app.get('/api/settings', async (_req, res) => {
   try {
     const db = getDb();
     const rows = await db.all('SELECT key, value FROM settings');
@@ -147,7 +147,7 @@ app.get('/api/settings', requireAuth, async (_req, res) => {
   }
 });
 
-app.post('/api/settings', requireAuth, async (req, res) => {
+app.post('/api/settings', async (req, res) => {
   const db = getDb();
   const entries = Object.entries(req.body || {}) as [string, string][];
   try {

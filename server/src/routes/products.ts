@@ -78,7 +78,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create product
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
   const { code, name, category_id, price, image_url, is_active, options_json } = req.body as any;
   if (!code || !name || price == null) return res.status(400).json({ error: 'Missing required fields: code, name, price' });
   const priceNum = Number(price);
@@ -123,7 +123,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // Update product
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const { code, name, category_id, price, image_url, is_active, options_json } = req.body as any;
   const fields: string[] = [];
@@ -177,7 +177,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // Soft delete (disable) product
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   try {
     const db = getDb();
@@ -192,7 +192,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 // Effective modifiers for a product: union of category + product assignments
-router.get('/:id/modifiers', requireAuth, async (req, res) => {
+router.get('/:id/modifiers', async (req, res) => {
   const productId = Number(req.params.id);
   const db = getDb();
   const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);

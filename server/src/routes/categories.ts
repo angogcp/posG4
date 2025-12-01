@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 export const router = Router();
 
 // Fetch assigned modifiers for a category
-router.get('/:id/modifiers', requireAuth, async (req, res) => {
+router.get('/:id/modifiers', async (req, res) => {
   const id = Number(req.params.id);
   const db = getDb();
   const category = await db.get('SELECT * FROM categories WHERE id = ?', [id]);
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 });
 
 // Fetch single category by id
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const row = await getDb().get('SELECT * FROM categories WHERE id = ?', [id]);
   if (!row) return res.status(404).json({ error: 'Category not found' });
@@ -46,7 +46,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // Create category
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
   const { name, sort_order, is_active, options_json } = req.body as any;
   if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Name is required' });
   const sort = sort_order != null && sort_order !== '' ? Number(sort_order) : 0;
@@ -81,7 +81,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // Update category
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const { name, sort_order, is_active, options_json } = req.body as any;
   const fields: string[] = [];
@@ -129,7 +129,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // Soft delete (disable) category
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   try {
     const db = getDb();

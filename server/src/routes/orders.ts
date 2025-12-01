@@ -83,7 +83,8 @@ router.get('/:id', async (req, res) => {
   res.json({ ok: true, data: { order, items } });
 });
 
-router.post('/', requireAuth, async (req, res) => {
+// POST /api/orders - Create a new order
+router.post('/', async (req, res) => {
   const { items, discount_amount = 0, tax_amount = 0, payment_method, paid_amount, status: order_status, table_number, pax } = req.body as any;
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -91,7 +92,21 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const db = getDb();
-  const userId = (req.session as any).user.id;
+  let userId = (req.session as any)?.user?.id;
+
+  // Fallback for Vercel or no-auth mode: use the first admin or any user
+  if (!userId) {
+    const adminUser = await db.get('SELECT id FROM users WHERE role = ? LIMIT 1', ['admin']);
+    if (adminUser) {
+      userId = (adminUser as any).id;
+    } else {
+      const anyUser = await db.get('SELECT id FROM users LIMIT 1');
+      userId = (anyUser as any)?.id;
+    }
+  }
+  
+  // If still no user (empty DB?), use 0 or 1 as fallback (though constraints might fail)
+  if (!userId) userId = 1; 
 
   const subtotal = items.reduce((sum: number, it: any) => sum + it.quantity * it.unit_price, 0);
   const total = Math.max(0, subtotal - discount_amount + tax_amount);
