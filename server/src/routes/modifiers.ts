@@ -11,7 +11,7 @@ function parseNumber(val: any, fallback: number | null = null): number | null {
 }
 
 // CRUD: modifiers
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   const db = getDb();
   const q = String((req.query.q as string) || '').trim();
   const includeInactive = String(req.query.include_inactive || '1') === '1';
@@ -45,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const db = getDb();
   const mod = await db.get('SELECT * FROM modifiers WHERE id = ?', [id]);

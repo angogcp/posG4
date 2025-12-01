@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
   res.json({ ok: true, data: rows });
 });
 
-router.get('/search', requireAuth, async (req, res) => {
+router.get('/search', async (req, res) => {
   const { q, category_id, include_inactive, page, pageSize } = req.query as {
     q?: string;
     category_id?: string;
@@ -69,7 +69,7 @@ router.get('/search', requireAuth, async (req, res) => {
 });
 
 // Fetch single product by id
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const db = getDb();
   const id = Number(req.params.id);
   const row = await db.get('SELECT * FROM products WHERE id = ?', [id]);

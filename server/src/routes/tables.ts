@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 export const router = Router();
 
 // GET /api/tables - List all tables
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   const db = getDb();
   const showInactive = req.query.include_inactive === 'true';
   
@@ -28,7 +28,7 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // GET /api/tables/:id - Get a single table
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
   

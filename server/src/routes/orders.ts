@@ -7,8 +7,9 @@ const nanoid = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 8);
 export const router = Router();
 
 // GET /api/orders with filters and pagination
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   const db = getDb();
+
 
   // Parse query params
   const qRaw = (req.query.q ?? '').toString().trim();
@@ -74,7 +75,7 @@ router.get('/', requireAuth, async (req, res) => {
   res.json({ ok: true, data: rows, total, page, pageSize });
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const db = getDb();
   const order = await db.get('SELECT * FROM orders WHERE id = ?', [Number(req.params.id)]);
   if (!order) return res.status(404).json({ error: 'Order not found' });
