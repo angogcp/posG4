@@ -11,7 +11,7 @@ import axios from 'axios';
 
 // Ensure fetch calls go to the correct API base when running in Capacitor/Android or Local Dev
 const isCapacitor = typeof window !== 'undefined' && /^(capacitor|ionic):\/\//.test(window.location.href);
-const isDev = import.meta.env.DEV;
+const isDev = (import.meta as any).env.DEV;
 const apiBase = (import.meta as any).env?.VITE_API_BASE || 
                 (isCapacitor ? 'http://10.0.2.2:4001' : (isDev ? 'http://localhost:4001' : ''));
 
