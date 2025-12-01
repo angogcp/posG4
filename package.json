@@ -10,6 +10,7 @@
     "build": "npm run build:server && npm run build:web",
     "build:server": "cd server && npm run build",
     "build:web": "cd web && npm run build",
+    "postinstall": "npm install --prefix server && npm install --prefix web",
     "install:all": "npm install && cd server && npm install && cd ../web && npm install",
     "lint": "npm run lint:server && npm run lint:web",
     "lint:server": "cd server && npm run lint",
