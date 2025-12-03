@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ChevronRight, Minus, Plus, X, Utensils } from 'lucide-react';
+import { ShoppingBag, ChevronRight, Minus, Plus, X, Utensils, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface Category { id: number; name: string; }
@@ -158,26 +158,21 @@ export default function CustomerMenuPage() {
         </div>
         
         {/* Categories */}
-        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-          <button 
-            onClick={() => setActiveCategory('all')}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              activeCategory === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'
-            }`}
+        <div className="relative mb-2">
+          <select
+            value={activeCategory}
+            onChange={(e) => {
+              const val = e.target.value;
+              setActiveCategory(val === 'all' ? 'all' : Number(val));
+            }}
+            className="w-full appearance-none bg-neutral-100 border-none rounded-xl py-3 pl-4 pr-10 text-neutral-900 font-medium focus:ring-2 focus:ring-primary-500"
           >
-            All
-          </button>
-          {categories.map(cat => (
-            <button 
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                activeCategory === cat.id ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+            <option value="all">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 pointer-events-none" />
         </div>
       </div>
 
