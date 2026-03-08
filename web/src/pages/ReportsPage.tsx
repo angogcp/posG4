@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
+import { Download } from 'lucide-react'; // Added import for Download icon
 
 interface Totals { orders_count: number; subtotal: number; discount_amount: number; tax_amount: number; total_amount: number; paid_amount: number }
 interface DayPoint { day: string; total: number; orders: number }
@@ -59,9 +60,67 @@ export default function ReportsPage() {
     return orders > 0 ? (Number(totals.total_amount || 0) / orders) : 0;
   }, [totals]);
 
+  const exportToCSV = () => {
+    if (!totals) return;
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+
+    // Summary Section
+    csvContent += "=== Sales Summary ===\n";
+    csvContent += `Gross Sales,${totals.total_amount}\n`;
+    csvContent += `Orders,${totals.orders_count}\n`;
+    csvContent += `Avg Order,${avgOrder.toFixed(2)}\n`;
+    csvContent += `Tax Collected,${totals.tax_amount}\n`;
+    csvContent += `Discounts,${totals.discount_amount}\n`;
+    csvContent += `Subtotal,${totals.subtotal}\n\n`;
+
+    // Daily Sales
+    csvContent += "=== Daily Sales ===\n";
+    csvContent += "Day,Orders,Total\n";
+    byDay.forEach(dp => {
+      csvContent += `${dp.day},${dp.orders},${dp.total}\n`;
+    });
+    csvContent += "\n";
+
+    // Payments
+    csvContent += "=== Payments ===\n";
+    csvContent += "Method,Orders,Total\n";
+    byPayment.forEach(p => {
+      csvContent += `${p.method},${p.orders},${p.total}\n`;
+    });
+    csvContent += "\n";
+
+    // Products
+    csvContent += "=== Top Products ===\n";
+    csvContent += "Product,Quantity,Amount\n";
+    topProducts.forEach(tp => {
+      // Escape product names block to safely include commas
+      const escapedName = `"${tp.product_name.replace(/"/g, '""')}"`;
+      csvContent += `${escapedName},${tp.quantity},${tp.amount}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `sales_report_${startDate}_to_${endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <h1 className="text-xl font-semibold mb-3">{t('reports.title')}</h1>
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="text-xl font-semibold">{t('reports.title')}</h1>
+        <button
+          onClick={exportToCSV}
+          disabled={loading || !totals}
+          className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg disabled:opacity-60 hover:bg-green-700 transition"
+        >
+          <Download size={18} />
+          {t('common.export', 'Export CSV')}
+        </button>
+      </div>
 
       <div className="mb-3 flex flex-wrap gap-2 items-end">
         <div>

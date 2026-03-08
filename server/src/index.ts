@@ -80,7 +80,7 @@ try {
   if (!fs.existsSync(dataDir) && !isVercel) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-} catch (e) {}
+} catch (e) { }
 
 // Sessions
 let sessionStore: session.Store;
@@ -129,11 +129,7 @@ app.get('/api/debug', async (req, res) => {
 
 // Initialize DB with middleware to ensure tables exist
 let dbInitPromise: Promise<void> | null = null;
-app.use(async (req, res, next) => {
-  // Skip for non-api routes or static files if possible to save time, 
-  // but for safety let's check on all API requests
-  if (!req.path.startsWith('/api/')) return next();
-
+const ensureDbInit = () => {
   if (!dbInitPromise) {
     console.log('Initializing Database...');
     dbInitPromise = initDb().then(() => {
@@ -144,9 +140,19 @@ app.use(async (req, res, next) => {
       throw err;
     });
   }
-  
+  return dbInitPromise;
+};
+
+// Start DB init immediately in the background
+ensureDbInit().catch(console.error);
+
+app.use(async (req, res, next) => {
+  // Skip for non-api routes or static files if possible to save time, 
+  // but for safety let's check on all API requests
+  if (!req.path.startsWith('/api/')) return next();
+
   try {
-    await dbInitPromise;
+    await ensureDbInit();
     next();
   } catch (err) {
     console.error('DB Init Error during request:', err);

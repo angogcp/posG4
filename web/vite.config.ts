@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5180,
-    strictPort: true,
+    strictPort: false,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:4001',
